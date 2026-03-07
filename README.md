@@ -60,6 +60,15 @@ Each column is configured using `FancyColumn<TItem>`:
 | `SearchTextSelector` | `Func<TItem, string?>?` | Extracts the text used for searching (falls back to `ValueSelector?.ToString()`) |
 | `CellTemplate` | `RenderFragment<TItem>?` | Custom Blazor template to render cell content |
 
+## Setup
+
+To use SoPro.FancyTable in your Blazor application, you need to include Bootstrap CSS and Bootstrap Icons in your app. Add the following links to your `App.razor` (or `_Host.cshtml` for Blazor Server) in the `<head>` section:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+```
+
 ## Usage Example
 
 ```csharp
