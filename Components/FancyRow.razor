@@ -1,0 +1,36 @@
+﻿@typeparam TItem
+
+<tr class="@GetRowClass()">
+    @foreach (FancyColumn<TItem> column in VisibleColumns)
+    {
+        <td class="@column.CellClass">
+            @if (column.CellTemplate is not null)
+            {
+                @column.CellTemplate(Item)
+            }
+            else
+            {
+                @column.ValueSelector?.Invoke(Item)
+            }
+        </td>
+    }
+</tr>
+
+@code {
+    [Parameter, EditorRequired]
+    public required TItem Item { get; set; }
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<FancyColumn<TItem>> Columns { get; set; }
+
+    [Parameter]
+    public ISet<string>? HiddenColumnKeys { get; set; }
+
+    [Parameter]
+    public Func<TItem, string?>? RowClassSelector { get; set; }
+
+    private List<FancyColumn<TItem>> VisibleColumns =>
+        Columns.Where(c => HiddenColumnKeys is null || !HiddenColumnKeys.Contains(c.Key)).ToList();
+
+    private string? GetRowClass() => RowClassSelector?.Invoke(Item);
+}

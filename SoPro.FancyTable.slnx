@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../SoPro.Playground/SoPro.Playground.csproj" Id="d245aa68-b70b-4f9e-a848-e5b2d22d8dd6" />
+  <Project Path="SoPro.FancyTable.csproj" />
+</Solution>

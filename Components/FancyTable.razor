@@ -1,0 +1,209 @@
+﻿@typeparam TItem
+@implements IDisposable
+
+<div class="d-flex mb-2">
+    @if (ToolbarTemplate is not null)
+    {
+        @ToolbarTemplate
+    }
+    else
+    {
+        <div class="d-flex ms-auto">
+            <input class="form-control form-control-md" placeholder="@SearchPlaceholder" value="@SearchText" @oninput="OnSearchInput" @onkeyup="HandleSearchKeyPress" />
+
+            @if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                <button class="btn btn-sm btn-outline-secondary mx-1" @onclick="ApplySearch">
+                    <i class="bi bi-search"></i>
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-sm btn-outline-secondary mx-1" @onclick="ClearSearch">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+<div class="tree-table-container">
+    <table class="tree-table">
+        <thead>
+            <tr>
+                @foreach (FancyColumn<TItem> column in VisibleColumns)
+                {
+                    <th class="@column.HeaderClass">
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <span class="col-title">@column.Title</span>
+
+                            @if (column.Sortable)
+                            {
+                                <button class="btn btn-link p-0 border-0" @onclick="() => SortBy(column.Key)">
+                                    <i class="bi @(GetSortIcon(column.Key))"></i>
+                                </button>
+                            }
+
+                            @if (column.Hideable)
+                            {
+                                <button class="btn btn-link p-0 border-0" @onclick="() => HideColumn(column.Key)">
+                                    <i class="bi bi-eye-slash"></i>
+                                </button>
+                            }
+                        </div>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (TItem item in FilteredAndSortedItems)
+            {
+                <FancyRow TItem="TItem" Item="item" Columns="Columns" HiddenColumnKeys="HiddenColumns" />
+            }
+        </tbody>
+    </table>
+
+    @if (HiddenColumns.Count > 0)
+    {
+        <div class="mt-2 ps-2 py-1">
+            <small class="text-muted me-2">Hidden columns:</small>
+            @foreach (string key in HiddenColumns)
+            {
+                FancyColumn<TItem>? column = Columns.FirstOrDefault(c => c.Key == key);
+                if (column is not null)
+                {
+                    <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowColumn(key)">
+                        <i class="bi bi-eye me-1"></i>@column.Title
+                    </button>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<FancyColumn<TItem>> Columns { get; set; } = Array.Empty<FancyColumn<TItem>>();
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search";
+
+    [Parameter]
+    public RenderFragment? ToolbarTemplate { get; set; }
+
+    [Parameter]
+    public Func<TItem, string, bool>? SearchPredicate { get; set; }
+
+    private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
+    private string? SortColumnKey;
+    private bool SortAscending = true;
+    private string SearchText = string.Empty;
+    private string AppliedSearchText = string.Empty;
+    private Timer? debounceTimer;
+
+    private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
+        Columns.Where(c => !HiddenColumns.Contains(c.Key));
+
+    private IEnumerable<TItem> FilteredAndSortedItems
+    {
+        get
+        {
+            IEnumerable<TItem> query = Items;
+
+            string filter = string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
+            if (!string.IsNullOrWhiteSpace(filter))
+            {
+                query = query.Where(item => MatchesSearch(item, filter));
+            }
+
+            if (!string.IsNullOrWhiteSpace(SortColumnKey))
+            {
+                FancyColumn<TItem>? column = Columns.FirstOrDefault(c => c.Key == SortColumnKey);
+                if (column is not null)
+                {
+                    Func<TItem, IComparable?> selector = column.SortValueSelector
+                        ?? (item => column.ValueSelector?.Invoke(item) as IComparable);
+
+                    query = SortAscending
+                        ? query.OrderBy(selector)
+                        : query.OrderByDescending(selector);
+                }
+            }
+
+            return query;
+        }
+    }
+
+    private bool MatchesSearch(TItem item, string filter)
+    {
+        if (SearchPredicate is not null)
+            return SearchPredicate(item, filter);
+
+        return Columns
+            .Where(c => c.Searchable)
+            .Select(c => c.SearchTextSelector?.Invoke(item) ?? c.ValueSelector?.Invoke(item)?.ToString())
+            .Any(v => !string.IsNullOrWhiteSpace(v) && v.Contains(filter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SortBy(string columnKey)
+    {
+        if (SortColumnKey == columnKey)
+            SortAscending = !SortAscending;
+        else
+        {
+            SortColumnKey = columnKey;
+            SortAscending = true;
+        }
+    }
+
+    private string GetSortIcon(string key)
+    {
+        if (SortColumnKey != key) return "bi-arrow-down-up";
+        return SortAscending ? "bi-sort-up" : "bi-sort-down";
+    }
+
+    private void HideColumn(string key) => HiddenColumns.Add(key);
+    private void ShowColumn(string key) => HiddenColumns.Remove(key);
+
+    private void HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            debounceTimer?.Dispose();
+            ApplySearch();
+        }
+    }
+
+    private void ApplySearch()
+    {
+        AppliedSearchText = SearchText;
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        AppliedSearchText = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? string.Empty;
+
+        debounceTimer?.Dispose();
+        debounceTimer = new Timer(_ =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                AppliedSearchText = SearchText;
+                StateHasChanged();
+            });
+        }, null, 250, Timeout.Infinite);
+    }
+
+    public void Dispose() => debounceTimer?.Dispose();
+}
