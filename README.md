@@ -115,7 +115,6 @@ Each column is configured using `FancyColumn<TItem>`:
 
 ## Component Dependencies
 
-- **FancyRow**: Renders individual table rows
 - **Bootstrap 5**: For styling and grid utilities (MIT License)
 - **Bootstrap Icons**: For UI icons (search, sort, eye, etc.) (MIT License)
 
