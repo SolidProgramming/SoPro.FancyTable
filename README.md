@@ -280,6 +280,7 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 ## 🏁 Roadmap
 
 - [ ] Pagination support (maybe with custom template) ⏭️
+- [ ] Localization support for default UI text (search placeholder, aria labels) 🌐
 - [ ] Column resizing and reordering 📏
 - [ ] Export to CSV/Excel 🖺
 - [ ] Row selection and bulk actions ✨
