@@ -58,7 +58,7 @@
         <tbody>
             @foreach (TItem item in FilteredAndSortedItems)
             {
-                <FancyRow TItem="TItem" Item="item" Columns="Columns" HiddenColumnKeys="HiddenColumns" />
+                <FancyRow TItem="TItem" Item="item" Columns="Columns" HiddenColumnKeys="HiddenColumns" RowClassSelector="RowClassSelector" />
             }
         </tbody>
     </table>
@@ -96,6 +96,9 @@
 
     [Parameter]
     public Func<TItem, string, bool>? SearchPredicate { get; set; }
+
+    [Parameter]
+    public Func<TItem, string?>? RowClassSelector { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private string? SortColumnKey;
