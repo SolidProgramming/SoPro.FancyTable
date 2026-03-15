@@ -2,8 +2,6 @@
 
 ![](Playground.png)
 
-A feature-rich, generic Blazor table component for displaying and interacting with collections of data.
-
 ## Overview
 
 `FancyTable` is a reusable Blazor component that provides an interactive table experience with built-in support for searching, sorting, and column visibility management. It's designed to work with any data type through its generic `TItem` parameter.
