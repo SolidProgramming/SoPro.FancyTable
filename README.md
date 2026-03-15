@@ -286,3 +286,4 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 - [ ] Dark Mode support 🌙
 - [ ] Accessibility improvements (ARIA roles, keyboard navigation) ♿
 - [ ] Performance optimizations for large datasets (virtualization) ⚡
+- [ ] NuGet package release 📦
