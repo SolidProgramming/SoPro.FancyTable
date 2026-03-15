@@ -131,6 +131,6 @@ To use SoPro.FancyTable in your Blazor application, you need to include Bootstra
 
 ## License
 
-This project is licensed under the **MIT License** - see the LICENSE file for details.
+This project is licensed under the **MIT License**
 
 Bootstrap and Bootstrap Icons are also licensed under the MIT License, which is one of the most permissive open-source licenses. This allows for unrestricted use, modification, and distribution of this project with minimal restrictions.
