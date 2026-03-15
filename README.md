@@ -276,3 +276,15 @@ This example covers:
 This project is licensed under the **MIT License**.
 
 Bootstrap and Bootstrap Icons are also licensed under the MIT License.
+
+---
+
+## 🏁 Roadmap
+
+- [ ] Pagination support (maybe with custom template) ⏭️
+- [ ] Column resizing and reordering 📏
+- [ ] Export to CSV/Excel 🖺
+- [ ] Row selection and bulk actions ✨
+- [ ] Dark Mode support 🌙
+- [ ] Accessibility improvements (ARIA roles, keyboard navigation) ♿
+- [ ] Performance optimizations for large datasets (virtualization) ⚡
