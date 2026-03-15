@@ -1,5 +1,7 @@
 # SoPro.FancyTable
 
+![](Playground.png)   
+
 A feature-rich, generic Blazor table component for displaying and interacting with collections of data.
 
 ## Overview
