@@ -1,0 +1,83 @@
+@typeparam TItem
+
+<tr class="@GetRowClass()">
+    @for (int index = 0; index < VisibleColumns.Count; index++)
+    {
+        FancyColumn<TItem> column = VisibleColumns[index];
+
+        <td class="@GetCellClass(column, index == 0)">
+            @if (index == 0)
+            {
+                <div class="tree-node-content">
+                    <span class="tree-indent" style="@($"width: {Node.Depth * 1.25}rem;")" aria-hidden="true"></span>
+
+                    @if (Node.HasChildren)
+                    {
+                        <button type="button"
+                                class="tree-toggle-btn"
+                                @onclick="() => ToggleNode.InvokeAsync(Node)"
+                                aria-label="@(Node.IsExpanded ? CollapseLabel : ExpandLabel)"
+                                aria-expanded="@Node.IsExpanded">
+                            <i class="bi @(Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="tree-toggle-placeholder" aria-hidden="true"></span>
+                    }
+
+                    <span class="tree-node-value">
+                        @RenderCellValue(column)
+                    </span>
+                </div>
+            }
+            else
+            {
+                @RenderCellValue(column)
+            }
+        </td>
+    }
+</tr>
+
+@code {
+    [Parameter, EditorRequired]
+    public required TreeNodeState<TItem> Node { get; set; }
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<FancyColumn<TItem>> VisibleColumns { get; set; }
+
+    [Parameter, EditorRequired]
+    public required EventCallback<TreeNodeState<TItem>> ToggleNode { get; set; }
+
+    [Parameter]
+    public Func<TItem, string?>? RowClassSelector { get; set; }
+
+    [Parameter]
+    public string ExpandLabel { get; set; } = "Expand";
+
+    [Parameter]
+    public string CollapseLabel { get; set; } = "Collapse";
+
+    private string? GetRowClass() => RowClassSelector?.Invoke(Node.Item);
+
+    private static string? GetCellClass(FancyColumn<TItem> column, bool isTreeColumn)
+    {
+        if (!isTreeColumn)
+            return column.CellClass;
+
+        return string.IsNullOrWhiteSpace(column.CellClass)
+            ? "tree-node-cell"
+            : $"{column.CellClass} tree-node-cell";
+    }
+
+    private RenderFragment RenderCellValue(FancyColumn<TItem> column) => builder =>
+    {
+        if (column.CellTemplate is not null)
+        {
+            builder.AddContent(0, column.CellTemplate(Node.Item));
+            return;
+        }
+
+        builder.AddContent(1, column.ValueSelector?.Invoke(Node.Item));
+    };
+}

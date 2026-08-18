@@ -1,4 +1,4 @@
-﻿@typeparam TItem
+@typeparam TItem
 @implements IDisposable
 
 <div class="d-flex mb-2">
@@ -56,9 +56,15 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (TItem item in FilteredAndSortedItems)
+            @foreach (TreeNodeState<TItem> node in VisibleNodes)
             {
-                <FancyRow TItem="TItem" Item="item" Columns="Columns" HiddenColumnKeys="HiddenColumns" RowClassSelector="RowClassSelector" />
+                <FancyTreeRow TItem="TItem"
+                              Node="node"
+                              VisibleColumns="VisibleColumnsList"
+                              ToggleNode="ToggleNodeAsync"
+                              RowClassSelector="RowClassSelector"
+                              ExpandLabel="ExpandLabel"
+                              CollapseLabel="CollapseLabel" />
             }
         </tbody>
     </table>
@@ -88,8 +94,20 @@
     [Parameter, EditorRequired]
     public required IReadOnlyList<FancyColumn<TItem>> Columns { get; set; } = Array.Empty<FancyColumn<TItem>>();
 
+    [Parameter, EditorRequired]
+    public required Func<TItem, IEnumerable<TItem>?> ChildItemsSelector { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool>? HasChildrenSelector { get; set; }
+
     [Parameter]
     public string SearchPlaceholder { get; set; } = "Search";
+
+    [Parameter]
+    public string ExpandLabel { get; set; } = "Expand";
+
+    [Parameter]
+    public string CollapseLabel { get; set; } = "Collapse";
 
     [Parameter]
     public RenderFragment? ToolbarTemplate { get; set; }
@@ -101,6 +119,8 @@
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
+    private readonly Dictionary<TItem, bool> ExpandedStates = new();
+    private readonly List<TreeNodeState<TItem>> RootNodes = [];
     private string? SortColumnKey;
     private bool SortAscending = true;
     private string SearchText = string.Empty;
@@ -110,18 +130,130 @@
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         Columns.Where(c => !HiddenColumns.Contains(c.Key));
 
-    private IEnumerable<TItem> FilteredAndSortedItems
+    private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
+
+    private IEnumerable<TreeNodeState<TItem>> VisibleNodes
     {
         get
         {
-            string filter = string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
-            IEnumerable<TItem> query = TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate);
-            return TableQueryHelpers.ApplySort(query, SortColumnKey, SortAscending, Columns);
+            string filter = CurrentFilter;
+            List<TreeNodeState<TItem>> visibleNodes = [];
+
+            if (string.IsNullOrWhiteSpace(filter))
+            {
+                foreach (TreeNodeState<TItem> root in RootNodes)
+                    CollectExpandedNodes(root, visibleNodes);
+            }
+            else
+            {
+                foreach (TreeNodeState<TItem> root in RootNodes)
+                    CollectSearchNodes(root, filter, visibleNodes, out _);
+            }
+
+            return visibleNodes;
         }
     }
 
-    private bool MatchesSearch(TItem item, string filter)
-        => TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);
+    private string CurrentFilter =>
+        string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
+
+    protected override void OnParametersSet()
+    {
+        RebuildTree();
+    }
+
+    private void RebuildTree()
+    {
+        RootNodes.Clear();
+
+        IEnumerable<TItem> sortedRootItems = ApplySiblingSort(Items);
+        foreach (TItem item in sortedRootItems)
+        {
+            TreeNodeState<TItem> rootNode = BuildNode(item, depth: 0, parent: null, ancestors: []);
+            RootNodes.Add(rootNode);
+        }
+    }
+
+    private TreeNodeState<TItem> BuildNode(
+        TItem item,
+        int depth,
+        TreeNodeState<TItem>? parent,
+        HashSet<TItem> ancestors)
+    {
+        bool addedToAncestors = ancestors.Add(item);
+        IEnumerable<TItem> childItems = Enumerable.Empty<TItem>();
+
+        if (addedToAncestors)
+        {
+            childItems = ChildItemsSelector(item) ?? Enumerable.Empty<TItem>();
+        }
+
+        List<TItem> orderedChildren = ApplySiblingSort(childItems).ToList();
+        TreeNodeState<TItem> node = new()
+        {
+            Item = item,
+            Depth = depth,
+            Parent = parent,
+            HasChildren = HasChildrenSelector?.Invoke(item) ?? orderedChildren.Count > 0,
+            IsExpanded = ExpandedStates.TryGetValue(item, out bool isExpanded) && isExpanded,
+            Children = []
+        };
+
+        if (addedToAncestors)
+        {
+            foreach (TItem childItem in orderedChildren)
+            {
+                TreeNodeState<TItem> childNode = BuildNode(childItem, depth + 1, node, ancestors);
+                node.Children.Add(childNode);
+            }
+
+            ancestors.Remove(item);
+        }
+
+        return node;
+    }
+
+    private IEnumerable<TItem> ApplySiblingSort(IEnumerable<TItem> items) =>
+        TableQueryHelpers.ApplySort(items, SortColumnKey, SortAscending, Columns);
+
+    private bool MatchesSearch(TItem item, string filter) =>
+        TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);
+
+    private void CollectExpandedNodes(TreeNodeState<TItem> node, List<TreeNodeState<TItem>> visibleNodes)
+    {
+        visibleNodes.Add(node);
+
+        if (!node.IsExpanded)
+            return;
+
+        foreach (TreeNodeState<TItem> child in node.Children)
+            CollectExpandedNodes(child, visibleNodes);
+    }
+
+    private bool CollectSearchNodes(
+        TreeNodeState<TItem> node,
+        string filter,
+        List<TreeNodeState<TItem>> visibleNodes,
+        out bool includeNode)
+    {
+        bool matchesSelf = MatchesSearch(node.Item, filter);
+        int insertIndex = visibleNodes.Count;
+        List<TreeNodeState<TItem>> childMatches = [];
+
+        foreach (TreeNodeState<TItem> child in node.Children)
+        {
+            CollectSearchNodes(child, filter, childMatches, out bool childIncluded);
+            _ = childIncluded;
+        }
+
+        includeNode = matchesSelf || childMatches.Count > 0;
+        if (!includeNode)
+            return false;
+
+        visibleNodes.Insert(insertIndex, node);
+        visibleNodes.AddRange(childMatches);
+        return true;
+    }
 
     private void SortBy(string columnKey)
     {
@@ -132,6 +264,8 @@
             SortColumnKey = columnKey;
             SortAscending = true;
         }
+
+        RebuildTree();
     }
 
     private string GetSortIcon(string key)
@@ -142,6 +276,13 @@
 
     private void HideColumn(string key) => HiddenColumns.Add(key);
     private void ShowColumn(string key) => HiddenColumns.Remove(key);
+
+    private Task ToggleNodeAsync(TreeNodeState<TItem> node)
+    {
+        node.IsExpanded = !node.IsExpanded;
+        ExpandedStates[node.Item] = node.IsExpanded;
+        return Task.CompletedTask;
+    }
 
     private void HandleSearchKeyPress(KeyboardEventArgs e)
     {

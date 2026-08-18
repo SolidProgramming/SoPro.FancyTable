@@ -6,6 +6,8 @@
 
 `FancyTable` is a reusable Blazor component that provides an interactive table experience with built-in support for searching, sorting, and column visibility management. It's designed to work with any data type through its generic `TItem` parameter.
 
+`FancyTreeTable` extends the same column model and interaction patterns to hierarchical datasets, so parent/child structures can be displayed with expand/collapse behavior.
+
 ## Features
 
 ### 🔍 Search
@@ -22,11 +24,18 @@
 - **Custom sort values**: Define custom sort comparisons per column via `SortValueSelector`
 - **Fallback sort value**: Falls back to `ValueSelector` when `SortValueSelector` is not set
 - **Toggle direction**: Click the same column header again to reverse sort order
+- **Tree-aware sorting**: In `FancyTreeTable`, sorting reorders only siblings within the same parent level
 
 ### 👁️ Column Visibility
 - **Hide columns**: Eye-slash button on hideable column headers hides columns on demand
 - **Show hidden columns**: Dedicated section below the table displays hidden columns with restore buttons
 - **Flexible configuration**: Each column can be marked as hideable via `Hideable`
+
+### 🌳 Hierarchical Data
+- **Expand/collapse**: `FancyTreeTable` renders nested rows with toggles in the first visible column
+- **Same column model**: Reuse `FancyColumn<TItem>` definitions across flat and tree tables
+- **Context-aware search**: Search results keep matching nodes and their ancestors visible
+- **Configurable child lookup**: Supply nested data via `ChildItemsSelector` and optionally `HasChildrenSelector`
 
 ### 🎨 Customization
 - **Custom toolbar**: Replace the default search bar via `ToolbarTemplate`
@@ -45,6 +54,17 @@
 | `ToolbarTemplate` | `RenderFragment?` | Custom toolbar content; replaces the default search bar |
 | `SearchPredicate` | `Func<TItem, string, bool>?` | Custom search logic; overrides default column-based search |
 | `RowClassSelector` | `Func<TItem, string?>?` | Returns CSS class(es) for each row |
+
+## Tree Table Parameters
+
+`FancyTreeTable<TItem>` supports the same parameters as `FancyTable<TItem>` and adds the following:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ChildItemsSelector` | `Func<TItem, IEnumerable<TItem>?>` | Returns the child items for a given node (required) |
+| `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
+| `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
+| `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
 
 ## Column Configuration
 
@@ -263,6 +283,84 @@ This example covers:
     private sealed record ProductRow(string Sku, string Category, decimal Price, int Stock, string Supplier);
 }
 ```
+
+## Tree Table Example
+
+`FancyTreeTable<TItem>` works with nested data while keeping the same column definition style:
+
+```csharp
+@page "/fancy-tree-table-demo"
+
+<FancyTreeTable TItem="FolderNode"
+                Items="Folders"
+                Columns="FolderColumns"
+                ChildItemsSelector="node => node.Children"
+                HasChildrenSelector="node => node.Children.Count > 0"
+                SearchPlaceholder="Search folders or files..." />
+
+@code {
+    private IReadOnlyList<FolderNode> Folders =
+    [
+        new("Projects", "Folder", 0, true,
+        [
+            new("SoPro.FancyTable", "Folder", 0, true,
+            [
+                new("README.md", "File", 12_288, false, []),
+                new("Components", "Folder", 0, true,
+                [
+                    new("FancyTreeTable.razor", "File", 10_240, false, [])
+                ])
+            ]),
+            new("Archive", "Folder", 0, true, [])
+        ]),
+        new("Downloads", "Folder", 0, true, [])
+    ];
+
+    private IReadOnlyList<FancyColumn<FolderNode>> FolderColumns =>
+    [
+        new FancyColumn<FolderNode>
+        {
+            Key = "name",
+            Title = "Name",
+            Sortable = true,
+            Searchable = true,
+            ValueSelector = node => node.Name,
+            SortValueSelector = node => node.Name
+        },
+        new FancyColumn<FolderNode>
+        {
+            Key = "kind",
+            Title = "Type",
+            Sortable = true,
+            Searchable = true,
+            ValueSelector = node => node.Kind,
+            SortValueSelector = node => node.Kind
+        },
+        new FancyColumn<FolderNode>
+        {
+            Key = "size",
+            Title = "Size",
+            Sortable = true,
+            Searchable = false,
+            ValueSelector = node => node.IsFolder ? "-" : $"{node.SizeInBytes:N0} B",
+            SortValueSelector = node => node.SizeInBytes
+        }
+    ];
+
+    private sealed record FolderNode(
+        string Name,
+        string Kind,
+        long SizeInBytes,
+        bool IsFolder,
+        IReadOnlyList<FolderNode> Children);
+}
+```
+
+### Tree Search and Sorting Semantics
+
+- Search shows matching nodes and their ancestors, so hits remain visible in context
+- Clearing the search restores the manual expand/collapse state from before the search
+- Sorting keeps the tree structure intact by sorting only within each sibling group
 
 ## Component Dependencies
 
