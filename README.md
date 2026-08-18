@@ -1,5 +1,7 @@
 # SoPro.FancyTable
 
+https://www.nuget.org/packages/SoPro.FancyTable
+
 ![](Playground.png)
 
 ## Overview
