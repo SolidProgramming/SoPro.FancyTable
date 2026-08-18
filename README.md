@@ -88,7 +88,7 @@ Each column is configured using `FancyColumn<TItem>`:
 
 ## Setup
 
-To use SoPro.FancyTable in your Blazor application, include Bootstrap CSS and Bootstrap Icons in your app (`App.razor` / host page):
+To use `SoPro.FancyTable` in your Blazor application, include Bootstrap CSS and Bootstrap Icons in your app (`App.razor` / host page):
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" />
