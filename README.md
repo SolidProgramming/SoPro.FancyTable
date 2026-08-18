@@ -1,6 +1,6 @@
 # SoPro.FancyTable
 
-![](Playground.png)
+
 
 ## Overview
 
