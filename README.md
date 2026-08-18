@@ -385,6 +385,7 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 
 ## 🏁 Roadmap
 
+- [x] NuGet package release 📦
 - [ ] Pagination support (maybe with custom template) ⏭️
 - [ ] Localization support for default UI text (search placeholder, aria labels) 🌐
 - [ ] Column resizing and reordering 📏
@@ -393,4 +394,3 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 - [ ] Dark Mode support 🌙
 - [ ] Accessibility improvements (ARIA roles, keyboard navigation) ♿
 - [ ] Performance optimizations for large datasets (virtualization) ⚡
-- [ ] NuGet package release 📦
