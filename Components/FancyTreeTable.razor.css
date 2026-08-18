@@ -73,6 +73,14 @@
     flex: 0 0 auto;
 }
 
+.tree-indent {
+    display: inline-block;
+}
+
+.tree-cell {
+    padding-left: 0 !important;
+}
+
 ::deep .tree-toggle-btn,
 ::deep .tree-toggle-placeholder {
     width: 1.5rem;
