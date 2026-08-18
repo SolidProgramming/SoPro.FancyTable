@@ -12,6 +12,7 @@
     <PackageTags>blazor;table;tree-table;razor;components</PackageTags>
 	<RepositoryUrl>https://github.com/SolidProgramming/SoPro.FancyTable</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	<PackageProjectUrl>https://github.com/SolidProgramming/SoPro.FancyTable</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
