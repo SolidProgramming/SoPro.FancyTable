@@ -95,6 +95,12 @@ To use SoPro.FancyTable in your Blazor application, include Bootstrap CSS and Bo
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 ```
 
+Add `SoPro.FancyTable.Components` to your `_Imports.razor` and rebuild the project:
+
+```razor
+@using SoPro.FancyTable.Components
+```
+
 ## Usage Example
 
 This example covers:
