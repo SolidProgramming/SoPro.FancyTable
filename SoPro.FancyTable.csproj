@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>SoPro.FancyTable</PackageId>
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
     <Authors>SolidProgramming</Authors>
     <Description>Reusable Blazor table components with sorting, search, column visibility, and tree table support.</Description>
     <PackageTags>blazor;table;tree-table;razor;components</PackageTags>
