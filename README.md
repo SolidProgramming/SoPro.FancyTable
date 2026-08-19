@@ -496,6 +496,13 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 - [ ] Localization support for default UI text (search placeholder, aria labels)
 - [ ] Column resizing and reordering
 - [ ] Export to CSV/Excel
+- [ ] Detail rows / expandable row content
+- [ ] Row click / activation API
+- [ ] Default sorting per column
+- [ ] Per-column filtering
+- [ ] Custom summary / action rows without full row override
+- [ ] Persistable UI state
+- [ ] Sticky header / scroll container options
 - [ ] Row selection and bulk actions
 - [ ] Dark Mode support
 - [ ] Accessibility improvements (ARIA roles, keyboard navigation)
