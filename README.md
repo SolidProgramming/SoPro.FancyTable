@@ -1,3 +1,4 @@
+[![.NET Build](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/dotnet-build.yml) <br/>
 [![CodeQL Advanced](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml/badge.svg)](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml)
 
 # SoPro.FancyTable
