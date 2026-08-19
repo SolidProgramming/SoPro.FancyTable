@@ -5,10 +5,10 @@
     PagedItemsResult pagedItems = GetPagedItems();
 }
 
-<div class="fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+<div class="@GetTopBarClass()">
     @if (ShouldRenderPageSizeSelector)
     {
-        <div class="fancy-page-size">
+        <div class="@GetPageSizeContainerClass()">
             @if (PageSizeTemplate is not null)
             {
                 @PageSizeTemplate(pagedItems.Context)
@@ -30,11 +30,13 @@
 
     @if (ToolbarTemplate is not null)
     {
-        @ToolbarTemplate
+        <div class="@GetToolbarContainerClass()">
+            @ToolbarTemplate
+        </div>
     }
     else
     {
-        <div class="d-flex ms-auto">
+        <div class="@GetToolbarContainerClass()">
             <input class="form-control form-control-md" placeholder="@SearchPlaceholder" value="@SearchText" @oninput="OnSearchInput" @onkeyup="HandleSearchKeyPress" />
 
             @if (string.IsNullOrWhiteSpace(SearchText))
@@ -116,14 +118,14 @@
 
 @if (ShouldRenderPaginationFooter(pagedItems.Context))
 {
-    <div class="fancy-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+    <div class="@GetPaginationContainerClass()">
         @if (PaginationTemplate is not null)
         {
             @PaginationTemplate(pagedItems.Context)
         }
         else
         {
-            <div class="fancy-pagination-summary text-muted small">
+            <div class="@GetPaginationSummaryClass()">
                 @if (PaginationSummaryTemplate is not null)
                 {
                     @PaginationSummaryTemplate(pagedItems.Context)
@@ -228,6 +230,21 @@
 
     [Parameter]
     public RenderFragment<FancyPaginationContext<TItem>>? PageSizeTemplate { get; set; }
+
+    [Parameter]
+    public string? TopBarClass { get; set; }
+
+    [Parameter]
+    public string? ToolbarContainerClass { get; set; }
+
+    [Parameter]
+    public string? PageSizeContainerClass { get; set; }
+
+    [Parameter]
+    public string? PaginationContainerClass { get; set; }
+
+    [Parameter]
+    public string? PaginationSummaryClass { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private string? SortColumnKey;
@@ -485,6 +502,19 @@
 
         return Enumerable.Range(startPage, endPage - startPage + 1).ToList();
     }
+
+    private string GetTopBarClass() => CombineClasses("fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2", TopBarClass);
+
+    private string GetToolbarContainerClass() => CombineClasses("d-flex ms-auto", ToolbarContainerClass);
+
+    private string GetPageSizeContainerClass() => CombineClasses("fancy-page-size", PageSizeContainerClass);
+
+    private string GetPaginationContainerClass() => CombineClasses("fancy-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3", PaginationContainerClass);
+
+    private string GetPaginationSummaryClass() => CombineClasses("fancy-pagination-summary text-muted small", PaginationSummaryClass);
+
+    private static string CombineClasses(string baseClass, string? additionalClass) =>
+        string.IsNullOrWhiteSpace(additionalClass) ? baseClass : $"{baseClass} {additionalClass}";
 
     private sealed class PagedItemsResult
     {

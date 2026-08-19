@@ -5,43 +5,38 @@
     PagedNodesResult pagedNodes = GetPagedNodes();
 }
 
-<div class="fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        @if (TreeActionsTemplate is not null)
-        {
-            @TreeActionsTemplate(TreeContext)
-        }
-
-        @if (ShouldRenderPageSizeSelector)
-        {
-            <div class="fancy-page-size">
-                @if (PageSizeTemplate is not null)
-                {
-                    @PageSizeTemplate(pagedNodes.Context)
-                }
-                else
-                {
-                    <label class="d-inline-flex align-items-center gap-2 small text-muted">
-                        <span>Rows per page</span>
-                        <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
-                            @foreach (int option in EffectivePageSizeOptions)
-                            {
-                                <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
-                            }
-                        </select>
-                    </label>
-                }
-            </div>
-        }
-    </div>
+<div class="@GetTopBarClass()">
+    @if (ShouldRenderPageSizeSelector)
+    {
+        <div class="@GetPageSizeContainerClass()">
+            @if (PageSizeTemplate is not null)
+            {
+                @PageSizeTemplate(pagedNodes.Context)
+            }
+            else
+            {
+                <label class="d-inline-flex align-items-center gap-2 small text-muted">
+                    <span>Rows per page</span>
+                    <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
+                        @foreach (int option in EffectivePageSizeOptions)
+                        {
+                            <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+    }
 
     @if (ToolbarTemplate is not null)
     {
-        @ToolbarTemplate
+        <div class="@GetToolbarContainerClass()">
+            @ToolbarTemplate
+        </div>
     }
     else
     {
-        <div class="d-flex ms-auto">
+        <div class="@GetToolbarContainerClass()">
             <input class="form-control form-control-md" placeholder="@SearchPlaceholder" value="@SearchText" @oninput="OnSearchInput" @onkeyup="HandleSearchKeyPress" />
 
             @if (string.IsNullOrWhiteSpace(SearchText))
@@ -59,6 +54,13 @@
         </div>
     }
 </div>
+
+@if (TreeActionsTemplate is not null)
+{
+    <div class="@GetTreeActionsContainerClass()">
+        @TreeActionsTemplate(TreeContext)
+    </div>
+}
 
 <div class="tree-table-container">
     <table class="tree-table">
@@ -126,14 +128,14 @@
 
 @if (ShouldRenderPaginationFooter(pagedNodes.Context))
 {
-    <div class="fancy-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+    <div class="@GetPaginationContainerClass()">
         @if (PaginationTemplate is not null)
         {
             @PaginationTemplate(pagedNodes.Context)
         }
         else
         {
-            <div class="fancy-pagination-summary text-muted small">
+            <div class="@GetPaginationSummaryClass()">
                 @if (PaginationSummaryTemplate is not null)
                 {
                     @PaginationSummaryTemplate(pagedNodes.Context)
@@ -253,6 +255,24 @@
 
     [Parameter]
     public RenderFragment<FancyTreeTableContext<TItem>>? TreeActionsTemplate { get; set; }
+
+    [Parameter]
+    public string? TopBarClass { get; set; }
+
+    [Parameter]
+    public string? ToolbarContainerClass { get; set; }
+
+    [Parameter]
+    public string? PageSizeContainerClass { get; set; }
+
+    [Parameter]
+    public string? TreeActionsContainerClass { get; set; }
+
+    [Parameter]
+    public string? PaginationContainerClass { get; set; }
+
+    [Parameter]
+    public string? PaginationSummaryClass { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
@@ -743,6 +763,21 @@
 
         return Enumerable.Range(startPage, endPage - startPage + 1).ToList();
     }
+
+    private string GetTopBarClass() => CombineClasses("fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2", TopBarClass);
+
+    private string GetToolbarContainerClass() => CombineClasses("d-flex ms-auto", ToolbarContainerClass);
+
+    private string GetPageSizeContainerClass() => CombineClasses("fancy-page-size", PageSizeContainerClass);
+
+    private string GetTreeActionsContainerClass() => CombineClasses("fancy-tree-actions", TreeActionsContainerClass);
+
+    private string GetPaginationContainerClass() => CombineClasses("fancy-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3", PaginationContainerClass);
+
+    private string GetPaginationSummaryClass() => CombineClasses("fancy-pagination-summary text-muted small", PaginationSummaryClass);
+
+    private static string CombineClasses(string baseClass, string? additionalClass) =>
+        string.IsNullOrWhiteSpace(additionalClass) ? baseClass : $"{baseClass} {additionalClass}";
 
     private sealed class PagedNodesResult
     {

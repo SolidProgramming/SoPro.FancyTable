@@ -53,6 +53,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Optional leading-content hook for the first cell via `RowLeadingContentTemplate`
 - Row classes via `RowClassSelector`
 - Header and cell styling via `HeaderClass` and `CellClass`
+- Wrapper layout classes for toolbar, tree actions, page size, and pagination containers
 
 ## Parameters
 
@@ -79,6 +80,11 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `PaginationSummaryTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Custom summary content for the default footer |
 | `PaginationTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the visible footer pager area |
 | `PageSizeTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the page-size selector area above the table |
+| `TopBarClass` | `string?` | Additional CSS classes for the top bar wrapper |
+| `ToolbarContainerClass` | `string?` | Additional CSS classes for the toolbar/search container |
+| `PageSizeContainerClass` | `string?` | Additional CSS classes for the page-size wrapper |
+| `PaginationContainerClass` | `string?` | Additional CSS classes for the pagination footer wrapper |
+| `PaginationSummaryClass` | `string?` | Additional CSS classes for the pagination summary wrapper |
 
 ## Tree Table Parameters
 
@@ -91,6 +97,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
 | `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
 | `TreeActionsTemplate` | `RenderFragment<FancyTreeTableContext<TItem>>?` | Renders custom tree-level actions such as expand/collapse all |
+| `TreeActionsContainerClass` | `string?` | Additional CSS classes for the tree actions wrapper |
 
 ## Row Context
 
@@ -352,6 +359,8 @@ This example covers:
 
 When pagination is enabled, `FancyTable` paginates after search and sorting. `CurrentPage` and `PageSize` can be bound to keep state stable across parent rerenders.
 
+Wrapper class parameters append to the built-in layout classes, so utility classes such as `d-inline-flex`, `justify-content-end`, or `gap-3` can adjust the layout without replacing templates.
+
 ## Tree Table Example
 
 `FancyTreeTable<TItem>` works with nested data while keeping the same column definition style:
@@ -368,6 +377,10 @@ When pagination is enabled, `FancyTable` paginates after search and sorting. `Cu
                 PaginationEnabled="true"
                 PageSize="5"
                 ShowPageSizeSelector="true"
+                TopBarClass="justify-content-end"
+                PageSizeContainerClass="me-auto"
+                TreeActionsContainerClass="d-inline-flex align-items-center gap-2"
+                PaginationContainerClass="justify-content-end"
                 TreeActionsTemplate="RuleTreeActions"
                 RowTemplate="SectionHeaderTemplate"
                 RowTemplateSelector="context => context.Item.IsSectionHeader"
