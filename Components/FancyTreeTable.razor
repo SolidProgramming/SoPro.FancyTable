@@ -1,4 +1,4 @@
-@typeparam TItem
+@typeparam TItem where TItem : notnull
 @implements IDisposable
 
 <div class="d-flex mb-2">
@@ -342,3 +342,5 @@
 
     public void Dispose() => debounceTimer?.Dispose();
 }
+
+
