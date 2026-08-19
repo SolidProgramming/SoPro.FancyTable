@@ -6,27 +6,34 @@
 }
 
 <div class="fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-    @if (ShouldRenderPageSizeSelector)
-    {
-        <div class="fancy-page-size">
-            @if (PageSizeTemplate is not null)
-            {
-                @PageSizeTemplate(pagedNodes.Context)
-            }
-            else
-            {
-                <label class="d-inline-flex align-items-center gap-2 small text-muted">
-                    <span>Rows per page</span>
-                    <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
-                        @foreach (int option in EffectivePageSizeOptions)
-                        {
-                            <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
-                        }
-                    </select>
-                </label>
-            }
-        </div>
-    }
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        @if (TreeActionsTemplate is not null)
+        {
+            @TreeActionsTemplate(TreeContext)
+        }
+
+        @if (ShouldRenderPageSizeSelector)
+        {
+            <div class="fancy-page-size">
+                @if (PageSizeTemplate is not null)
+                {
+                    @PageSizeTemplate(pagedNodes.Context)
+                }
+                else
+                {
+                    <label class="d-inline-flex align-items-center gap-2 small text-muted">
+                        <span>Rows per page</span>
+                        <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
+                            @foreach (int option in EffectivePageSizeOptions)
+                            {
+                                <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
+                            }
+                        </select>
+                    </label>
+                }
+            </div>
+        }
+    </div>
 
     @if (ToolbarTemplate is not null)
     {
@@ -244,6 +251,9 @@
     [Parameter]
     public RenderFragment<FancyPaginationContext<TItem>>? PageSizeTemplate { get; set; }
 
+    [Parameter]
+    public RenderFragment<FancyTreeTableContext<TItem>>? TreeActionsTemplate { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
     private readonly List<TreeNodeState<TItem>> RootNodes = [];
@@ -263,6 +273,7 @@
     private bool IsPaginationActive => PaginationEnabled && PaginationPageSize > 0;
     private bool ShouldRenderPageSizeSelector => PaginationEnabled && ShowPageSizeSelector;
     private int PaginationPageSize => paginationPageSize > 0 ? paginationPageSize : 0;
+    private FancyTreeTableContext<TItem> TreeContext => BuildTreeContext();
 
     private string CurrentFilter =>
         string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
@@ -457,8 +468,30 @@
     private Task ToggleNodeAsync(TreeNodeState<TItem> node)
     {
         node.IsExpanded = !node.IsExpanded;
-        ExpandedStates[node.Item] = node.IsExpanded;
+        if (node.IsExpanded)
+        {
+            ExpandedStates[node.Item] = true;
+        }
+        else
+        {
+            ExpandedStates.Remove(node.Item);
+        }
+
         return Task.CompletedTask;
+    }
+
+    public async Task ExpandAllAsync()
+    {
+        ExpandedStates.Clear();
+        SetExpandedStateForAllNodes(expanded: true);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task CollapseAllAsync()
+    {
+        ExpandedStates.Clear();
+        SetExpandedStateForAllNodes(expanded: false);
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleSearchKeyPress(KeyboardEventArgs e)
@@ -532,6 +565,85 @@
             goToPreviousPageAsync: () => SetCurrentPageAsync(paginationCurrentPage - 1),
             goToNextPageAsync: () => SetCurrentPageAsync(paginationCurrentPage + 1),
             setPageSizeAsync: SetPageSizeAsync);
+    }
+
+    private FancyTreeTableContext<TItem> BuildTreeContext()
+    {
+        TreeNodeStatistics stats = GetTreeNodeStatistics();
+
+        return new FancyTreeTableContext<TItem>(
+            rootItemCount: RootNodes.Count,
+            visibleNodeCount: BuildVisibleNodes().Count,
+            expandedNodeCount: stats.ExpandedNodeCount,
+            hasExpandableNodes: stats.ExpandableNodeCount > 0,
+            canExpandAny: stats.CollapsedExpandableNodeCount > 0,
+            canCollapseAny: stats.ExpandedNodeCount > 0,
+            expandAllAsync: ExpandAllAsync,
+            collapseAllAsync: CollapseAllAsync);
+    }
+
+    private void SetExpandedStateForAllNodes(bool expanded)
+    {
+        foreach (TreeNodeState<TItem> rootNode in RootNodes)
+        {
+            SetExpandedStateRecursive(rootNode, expanded);
+        }
+    }
+
+    private void SetExpandedStateRecursive(TreeNodeState<TItem> node, bool expanded)
+    {
+        if (node.HasChildren)
+        {
+            node.IsExpanded = expanded;
+
+            if (expanded)
+            {
+                ExpandedStates[node.Item] = true;
+            }
+        }
+        else
+        {
+            node.IsExpanded = false;
+        }
+
+        foreach (TreeNodeState<TItem> child in node.Children)
+        {
+            SetExpandedStateRecursive(child, expanded);
+        }
+    }
+
+    private TreeNodeStatistics GetTreeNodeStatistics()
+    {
+        TreeNodeStatistics stats = new();
+
+        foreach (TreeNodeState<TItem> rootNode in RootNodes)
+        {
+            CollectTreeNodeStatistics(rootNode, stats);
+        }
+
+        return stats;
+    }
+
+    private static void CollectTreeNodeStatistics(TreeNodeState<TItem> node, TreeNodeStatistics stats)
+    {
+        if (node.HasChildren)
+        {
+            stats.ExpandableNodeCount++;
+
+            if (node.IsExpanded)
+            {
+                stats.ExpandedNodeCount++;
+            }
+            else
+            {
+                stats.CollapsedExpandableNodeCount++;
+            }
+        }
+
+        foreach (TreeNodeState<TItem> child in node.Children)
+        {
+            CollectTreeNodeStatistics(child, stats);
+        }
     }
 
     private IReadOnlyList<TreeNodeState<TItem>> ApplyPagination(
@@ -636,6 +748,13 @@
     {
         public required IReadOnlyList<TreeNodeState<TItem>> Items { get; init; }
         public required FancyPaginationContext<TItem> Context { get; init; }
+    }
+
+    private sealed class TreeNodeStatistics
+    {
+        public int ExpandableNodeCount { get; set; }
+        public int ExpandedNodeCount { get; set; }
+        public int CollapsedExpandableNodeCount { get; set; }
     }
 
     public void Dispose() => debounceTimer?.Dispose();

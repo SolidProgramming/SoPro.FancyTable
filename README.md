@@ -36,6 +36,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 
 ### Hierarchical data
 - Expand/collapse in `FancyTreeTable`
+- Expand all / collapse all via `TreeActionsTemplate` or `@ref`
 - Shared column model across flat and tree tables
 - Search keeps matching nodes and their ancestors visible
 - Configurable child lookup via `ChildItemsSelector`
@@ -89,6 +90,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
 | `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
 | `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
+| `TreeActionsTemplate` | `RenderFragment<FancyTreeTableContext<TItem>>?` | Renders custom tree-level actions such as expand/collapse all |
 
 ## Row Context
 
@@ -109,6 +111,26 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `CollapseLabel` | `string` | Accessible label for expanded nodes |
 
 For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth = 0`, `HasChildren = false`, and `ToggleNode` is empty.
+
+## Tree Table Context
+
+`FancyTreeTableContext<TItem>` is passed into `TreeActionsTemplate`.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `RootItemCount` | `int` | Number of root items in the tree |
+| `VisibleNodeCount` | `int` | Number of currently visible nodes after search and expand/collapse state |
+| `ExpandedNodeCount` | `int` | Number of currently expanded nodes that have children |
+| `HasExpandableNodes` | `bool` | Whether the tree contains any expandable nodes |
+| `CanExpandAny` | `bool` | Whether at least one expandable node is currently collapsed |
+| `CanCollapseAny` | `bool` | Whether at least one expandable node is currently expanded |
+| `ExpandAll()` | `Task` | Expands the entire tree across all levels |
+| `CollapseAll()` | `Task` | Collapses the entire tree across all levels |
+
+`FancyTreeTable<TItem>` also exposes imperative methods for `@ref` usage:
+
+- `ExpandAllAsync()`
+- `CollapseAllAsync()`
 
 ## Pagination Context
 
@@ -338,6 +360,7 @@ When pagination is enabled, `FancyTable` paginates after search and sorting. `Cu
 @page "/fancy-tree-table-demo"
 
 <FancyTreeTable TItem="RuleRow"
+                @ref="RuleTable"
                 Items="Rules"
                 Columns="RuleColumns"
                 ChildItemsSelector="row => row.Children"
@@ -345,11 +368,14 @@ When pagination is enabled, `FancyTable` paginates after search and sorting. `Cu
                 PaginationEnabled="true"
                 PageSize="5"
                 ShowPageSizeSelector="true"
+                TreeActionsTemplate="RuleTreeActions"
                 RowTemplate="SectionHeaderTemplate"
                 RowTemplateSelector="context => context.Item.IsSectionHeader"
                 SearchPlaceholder="Search rules..." />
 
 @code {
+    private FancyTreeTable<RuleRow>? RuleTable;
+
     private static readonly RuleRow Rule_11_1 = new("11.1", "Allow HTTPS", "TCP", "443", "Any", "Server-A", "Allow", [], false);
     private static readonly RuleRow Rule_11_2 = new("11.2", "Allow DNS", "UDP", "53", "Any", "DNS-1", "Allow", [], false);
     private static readonly RuleRow Rule_11_3 = new("11.3", "Block Telnet", "TCP", "23", "Any", "Any", "Deny", [], false);
@@ -385,10 +411,36 @@ When pagination is enabled, `FancyTable` paginates after search and sorting. `Cu
         </td>
     </tr>;
 
+    private RenderFragment<FancyTreeTableContext<RuleRow>> RuleTreeActions => context => @<div class="d-flex flex-wrap gap-2 align-items-center">
+        <button type="button"
+                class="btn btn-sm btn-outline-primary"
+                disabled="@(!context.CanExpandAny)"
+                @onclick="context.ExpandAll">
+            Expand All
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                disabled="@(!context.CanCollapseAny)"
+                @onclick="context.CollapseAll">
+            Collapse All
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-outline-dark"
+                disabled="@(RuleTable is null)"
+                @onclick="ExpandViaReferenceAsync">
+            Expand via @ref
+        </button>
+        <span class="small text-muted">
+            @context.VisibleNodeCount visible rows, @context.ExpandedNodeCount expanded nodes
+        </span>
+    </div>;
+
     private void InspectSection(RuleRow row)
     {
         Console.WriteLine($"Inspect section {row.Name}");
     }
+
+    private Task ExpandViaReferenceAsync() => RuleTable?.ExpandAllAsync() ?? Task.CompletedTask;
 
     private sealed record RuleRow(
         string Number,
@@ -402,6 +454,8 @@ When pagination is enabled, `FancyTable` paginates after search and sorting. `Cu
         bool IsSectionHeader = false);
 }
 ```
+
+Global expand/collapse actions always operate on the full tree, not just on the current page or currently visible search results.
 
 ## Tree Search and Sorting Semantics
 
