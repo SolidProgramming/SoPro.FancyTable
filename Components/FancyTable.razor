@@ -1,4 +1,4 @@
-﻿@typeparam TItem
+@typeparam TItem
 @implements IDisposable
 
 <div class="d-flex mb-2">
@@ -60,9 +60,10 @@
             {
                 <FancyRow TItem="TItem"
                           Item="item"
-                          Columns="Columns"
-                          HiddenColumnKeys="HiddenColumns"
+                          VisibleColumns="VisibleColumnsList"
                           RowClassSelector="RowClassSelector"
+                          RowAttributesSelector="RowAttributesSelector"
+                          RowLeadingContentTemplate="RowLeadingContentTemplate"
                           RowTemplate="RowTemplate"
                           RowTemplateSelector="RowTemplateSelector" />
             }
@@ -107,10 +108,16 @@
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     [Parameter]
-    public RenderFragment<TItem>? RowTemplate { get; set; }
+    public Func<FancyRowContext<TItem>, IReadOnlyDictionary<string, object?>?>? RowAttributesSelector { get; set; }
 
     [Parameter]
-    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowLeadingContentTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyRowContext<TItem>>? RowTemplate { get; set; }
+
+    [Parameter]
+    public Func<FancyRowContext<TItem>, bool>? RowTemplateSelector { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private string? SortColumnKey;
@@ -122,6 +129,8 @@
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         Columns.Where(c => !HiddenColumns.Contains(c.Key));
 
+    private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
+
     private IEnumerable<TItem> FilteredAndSortedItems
     {
         get
@@ -131,9 +140,6 @@
             return TableQueryHelpers.ApplySort(query, SortColumnKey, SortAscending, Columns);
         }
     }
-
-    private bool MatchesSearch(TItem item, string filter)
-        => TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);
 
     private void SortBy(string columnKey)
     {

@@ -1,16 +1,12 @@
 @typeparam TItem
 
-@if (ShouldRenderTreeTemplate)
+@if (ShouldRenderCustomTemplate)
 {
-    @TreeRowTemplate!(TreeRowTemplateContext)
-}
-else if (ShouldRenderCustomTemplate)
-{
-    @RowTemplate!(Node.Item)
+    @RowTemplate!(RowContext)
 }
 else
 {
-    <tr class="@GetRowClass()">
+    <tr class="@GetRowClass()" @attributes="GetRowAttributes()">
         @for (int index = 0; index < VisibleColumns.Count; index++)
         {
             FancyColumn<TItem> column = VisibleColumns[index];
@@ -25,15 +21,20 @@ else
                         {
                             <button type="button"
                                     class="tree-toggle-btn"
-                                    @onclick="() => ToggleNode.InvokeAsync(Node)"
-                                    aria-label="@(Node.IsExpanded ? CollapseLabel : ExpandLabel)"
-                                    aria-expanded="@Node.IsExpanded">
-                                <i class="bi @(Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                                    @onclick="() => RowContext.ToggleNode.InvokeAsync()"
+                                    aria-label="@(RowContext.IsExpanded ? CollapseLabel : ExpandLabel)"
+                                    aria-expanded="@RowContext.IsExpanded">
+                                <i class="bi @(RowContext.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
                             </button>
                         }
                         else
                         {
                             <span class="tree-toggle-placeholder" aria-hidden="true"></span>
+                        }
+
+                        @if (RowLeadingContentTemplate is not null)
+                        {
+                            @RowLeadingContentTemplate(RowContext)
                         }
 
                         <span class="tree-node-value">
@@ -64,16 +65,16 @@ else
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     [Parameter]
-    public RenderFragment<TItem>? RowTemplate { get; set; }
+    public Func<FancyRowContext<TItem>, IReadOnlyDictionary<string, object?>?>? RowAttributesSelector { get; set; }
 
     [Parameter]
-    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowLeadingContentTemplate { get; set; }
 
     [Parameter]
-    public RenderFragment<FancyTreeRowTemplateContext<TItem>>? TreeRowTemplate { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowTemplate { get; set; }
 
     [Parameter]
-    public Func<TreeNodeState<TItem>, bool>? TreeRowTemplateSelector { get; set; }
+    public Func<FancyRowContext<TItem>, bool>? RowTemplateSelector { get; set; }
 
     [Parameter]
     public string ExpandLabel { get; set; } = "Expand";
@@ -81,21 +82,25 @@ else
     [Parameter]
     public string CollapseLabel { get; set; } = "Collapse";
 
-    private bool ShouldRenderTreeTemplate =>
-        TreeRowTemplate is not null && TreeRowTemplateSelector?.Invoke(Node) == true;
-
-    private bool ShouldRenderCustomTemplate =>
-        RowTemplate is not null && RowTemplateSelector?.Invoke(Node.Item) == true;
-
-    private FancyTreeRowTemplateContext<TItem> TreeRowTemplateContext => new()
+    private FancyRowContext<TItem> RowContext => new()
     {
-        Node = Node,
-        ToggleNode = ToggleNode,
+        Item = Node.Item,
+        Columns = VisibleColumns,
+        ToggleNode = EventCallback.Factory.Create(this, () => ToggleNode.InvokeAsync(Node)),
         ExpandLabel = ExpandLabel,
-        CollapseLabel = CollapseLabel
+        CollapseLabel = CollapseLabel,
+        IsTreeNode = true,
+        Depth = Node.Depth,
+        HasChildren = Node.HasChildren,
+        IsExpanded = Node.IsExpanded
     };
 
+    private bool ShouldRenderCustomTemplate =>
+        RowTemplate is not null && (RowTemplateSelector?.Invoke(RowContext) ?? true);
+
     private string? GetRowClass() => RowClassSelector?.Invoke(Node.Item);
+
+    private IReadOnlyDictionary<string, object?>? GetRowAttributes() => RowAttributesSelector?.Invoke(RowContext);
 
     private static string? GetCellClass(FancyColumn<TItem> column, bool isTreeColumn)
     {

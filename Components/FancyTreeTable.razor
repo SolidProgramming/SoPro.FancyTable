@@ -63,10 +63,10 @@
                               VisibleColumns="VisibleColumnsList"
                               ToggleNode="ToggleNodeAsync"
                               RowClassSelector="RowClassSelector"
+                              RowAttributesSelector="RowAttributesSelector"
+                              RowLeadingContentTemplate="RowLeadingContentTemplate"
                               RowTemplate="RowTemplate"
                               RowTemplateSelector="RowTemplateSelector"
-                              TreeRowTemplate="TreeRowTemplate"
-                              TreeRowTemplateSelector="TreeRowTemplateSelector"
                               ExpandLabel="ExpandLabel"
                               CollapseLabel="CollapseLabel" />
             }
@@ -123,16 +123,16 @@
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     [Parameter]
-    public RenderFragment<TItem>? RowTemplate { get; set; }
+    public Func<FancyRowContext<TItem>, IReadOnlyDictionary<string, object?>?>? RowAttributesSelector { get; set; }
 
     [Parameter]
-    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowLeadingContentTemplate { get; set; }
 
     [Parameter]
-    public RenderFragment<FancyTreeRowTemplateContext<TItem>>? TreeRowTemplate { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowTemplate { get; set; }
 
     [Parameter]
-    public Func<TreeNodeState<TItem>, bool>? TreeRowTemplateSelector { get; set; }
+    public Func<FancyRowContext<TItem>, bool>? RowTemplateSelector { get; set; }
 
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly Dictionary<TItem, bool> ExpandedStates = new();

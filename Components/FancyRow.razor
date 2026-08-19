@@ -1,15 +1,22 @@
-﻿@typeparam TItem
+@typeparam TItem
 
 @if (ShouldRenderCustomTemplate)
 {
-    @RowTemplate!(Item)
+    @RowTemplate!(RowContext)
 }
 else
 {
-    <tr class="@GetRowClass()">
-        @foreach (FancyColumn<TItem> column in VisibleColumns)
+    <tr class="@GetRowClass()" @attributes="GetRowAttributes()">
+        @for (int index = 0; index < VisibleColumns.Count; index++)
         {
+            FancyColumn<TItem> column = VisibleColumns[index];
+
             <td class="@column.CellClass">
+                @if (index == 0 && RowLeadingContentTemplate is not null)
+                {
+                    @RowLeadingContentTemplate(RowContext)
+                }
+
                 @if (column.CellTemplate is not null)
                 {
                     @column.CellTemplate(Item)
@@ -28,25 +35,40 @@ else
     public required TItem Item { get; set; }
 
     [Parameter, EditorRequired]
-    public required IReadOnlyList<FancyColumn<TItem>> Columns { get; set; }
-
-    [Parameter]
-    public ISet<string>? HiddenColumnKeys { get; set; }
+    public required IReadOnlyList<FancyColumn<TItem>> VisibleColumns { get; set; }
 
     [Parameter]
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     [Parameter]
-    public RenderFragment<TItem>? RowTemplate { get; set; }
+    public Func<FancyRowContext<TItem>, IReadOnlyDictionary<string, object?>?>? RowAttributesSelector { get; set; }
 
     [Parameter]
-    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+    public RenderFragment<FancyRowContext<TItem>>? RowLeadingContentTemplate { get; set; }
 
-    private List<FancyColumn<TItem>> VisibleColumns =>
-        Columns.Where(c => HiddenColumnKeys is null || !HiddenColumnKeys.Contains(c.Key)).ToList();
+    [Parameter]
+    public RenderFragment<FancyRowContext<TItem>>? RowTemplate { get; set; }
+
+    [Parameter]
+    public Func<FancyRowContext<TItem>, bool>? RowTemplateSelector { get; set; }
+
+    private FancyRowContext<TItem> RowContext => new()
+    {
+        Item = Item,
+        Columns = VisibleColumns,
+        ToggleNode = EventCallback.Empty,
+        ExpandLabel = string.Empty,
+        CollapseLabel = string.Empty,
+        IsTreeNode = false,
+        Depth = 0,
+        HasChildren = false,
+        IsExpanded = false
+    };
 
     private bool ShouldRenderCustomTemplate =>
-        RowTemplate is not null && RowTemplateSelector?.Invoke(Item) == true;
+        RowTemplate is not null && (RowTemplateSelector?.Invoke(RowContext) ?? true);
 
     private string? GetRowClass() => RowClassSelector?.Invoke(Item);
+
+    private IReadOnlyDictionary<string, object?>? GetRowAttributes() => RowAttributesSelector?.Invoke(RowContext);
 }
