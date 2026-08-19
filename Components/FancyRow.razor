@@ -1,20 +1,27 @@
 ﻿@typeparam TItem
 
-<tr class="@GetRowClass()">
-    @foreach (FancyColumn<TItem> column in VisibleColumns)
-    {
-        <td class="@column.CellClass">
-            @if (column.CellTemplate is not null)
-            {
-                @column.CellTemplate(Item)
-            }
-            else
-            {
-                @column.ValueSelector?.Invoke(Item)
-            }
-        </td>
-    }
-</tr>
+@if (ShouldRenderCustomTemplate)
+{
+    @RowTemplate!(Item)
+}
+else
+{
+    <tr class="@GetRowClass()">
+        @foreach (FancyColumn<TItem> column in VisibleColumns)
+        {
+            <td class="@column.CellClass">
+                @if (column.CellTemplate is not null)
+                {
+                    @column.CellTemplate(Item)
+                }
+                else
+                {
+                    @column.ValueSelector?.Invoke(Item)
+                }
+            </td>
+        }
+    </tr>
+}
 
 @code {
     [Parameter, EditorRequired]
@@ -29,8 +36,17 @@
     [Parameter]
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
+    [Parameter]
+    public RenderFragment<TItem>? RowTemplate { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+
     private List<FancyColumn<TItem>> VisibleColumns =>
         Columns.Where(c => HiddenColumnKeys is null || !HiddenColumnKeys.Contains(c.Key)).ToList();
+
+    private bool ShouldRenderCustomTemplate =>
+        RowTemplate is not null && RowTemplateSelector?.Invoke(Item) == true;
 
     private string? GetRowClass() => RowClassSelector?.Invoke(Item);
 }

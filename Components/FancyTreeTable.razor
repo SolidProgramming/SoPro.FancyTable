@@ -63,6 +63,10 @@
                               VisibleColumns="VisibleColumnsList"
                               ToggleNode="ToggleNodeAsync"
                               RowClassSelector="RowClassSelector"
+                              RowTemplate="RowTemplate"
+                              RowTemplateSelector="RowTemplateSelector"
+                              TreeRowTemplate="TreeRowTemplate"
+                              TreeRowTemplateSelector="TreeRowTemplateSelector"
                               ExpandLabel="ExpandLabel"
                               CollapseLabel="CollapseLabel" />
             }
@@ -118,6 +122,18 @@
     [Parameter]
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
+    [Parameter]
+    public RenderFragment<TItem>? RowTemplate { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyTreeRowTemplateContext<TItem>>? TreeRowTemplate { get; set; }
+
+    [Parameter]
+    public Func<TreeNodeState<TItem>, bool>? TreeRowTemplateSelector { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
     private readonly List<TreeNodeState<TItem>> RootNodes = [];
@@ -166,7 +182,7 @@
     {
         RootNodes.Clear();
 
-        IEnumerable<TItem> sortedRootItems = ApplySiblingSort(Items);
+        IEnumerable<TItem> sortedRootItems = ApplySiblingSort(FilterNullItems(Items));
         foreach (TItem item in sortedRootItems)
         {
             TreeNodeState<TItem> rootNode = BuildNode(item, depth: 0, parent: null, ancestors: []);
@@ -185,7 +201,7 @@
 
         if (addedToAncestors)
         {
-            childItems = ChildItemsSelector(item) ?? Enumerable.Empty<TItem>();
+            childItems = FilterNullItems(ChildItemsSelector(item) ?? Enumerable.Empty<TItem>());
         }
 
         List<TItem> orderedChildren = ApplySiblingSort(childItems).ToList();
@@ -215,6 +231,9 @@
 
     private IEnumerable<TItem> ApplySiblingSort(IEnumerable<TItem> items) =>
         TableQueryHelpers.ApplySort(items, SortColumnKey, SortAscending, Columns);
+
+    private static IEnumerable<TItem> FilterNullItems(IEnumerable<TItem> items) =>
+        items.Where(static item => item is not null);
 
     private bool MatchesSearch(TItem item, string filter) =>
         TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);

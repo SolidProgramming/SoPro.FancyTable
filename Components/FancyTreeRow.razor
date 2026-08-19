@@ -1,43 +1,54 @@
 @typeparam TItem
 
-<tr class="@GetRowClass()">
-    @for (int index = 0; index < VisibleColumns.Count; index++)
-    {
-        FancyColumn<TItem> column = VisibleColumns[index];
+@if (ShouldRenderTreeTemplate)
+{
+    @TreeRowTemplate!(TreeRowTemplateContext)
+}
+else if (ShouldRenderCustomTemplate)
+{
+    @RowTemplate!(Node.Item)
+}
+else
+{
+    <tr class="@GetRowClass()">
+        @for (int index = 0; index < VisibleColumns.Count; index++)
+        {
+            FancyColumn<TItem> column = VisibleColumns[index];
 
-        <td class="@GetCellClass(column, index == 0)">
-            @if (index == 0)
-            {
-                <div class="tree-node-content">
-                    <span class="tree-indent" style="@($"width: {Node.Depth}rem;")" aria-hidden="true"></span>
+            <td class="@GetCellClass(column, index == 0)">
+                @if (index == 0)
+                {
+                    <div class="tree-node-content">
+                        <span class="tree-indent" style="@($"width: {Node.Depth}rem;")" aria-hidden="true"></span>
 
-                    @if (Node.HasChildren)
-                    {
-                        <button type="button"
-                                class="tree-toggle-btn"
-                                @onclick="() => ToggleNode.InvokeAsync(Node)"
-                                aria-label="@(Node.IsExpanded ? CollapseLabel : ExpandLabel)"
-                                aria-expanded="@Node.IsExpanded">
-                            <i class="bi @(Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
-                        </button>
-                    }
-                    else
-                    {
-                        <span class="tree-toggle-placeholder" aria-hidden="true"></span>
-                    }
+                        @if (Node.HasChildren)
+                        {
+                            <button type="button"
+                                    class="tree-toggle-btn"
+                                    @onclick="() => ToggleNode.InvokeAsync(Node)"
+                                    aria-label="@(Node.IsExpanded ? CollapseLabel : ExpandLabel)"
+                                    aria-expanded="@Node.IsExpanded">
+                                <i class="bi @(Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="tree-toggle-placeholder" aria-hidden="true"></span>
+                        }
 
-                    <span class="tree-node-value">
-                        @RenderCellValue(column)
-                    </span>
-                </div>
-            }
-            else
-            {
-                @RenderCellValue(column)
-            }
-        </td>
-    }
-</tr>
+                        <span class="tree-node-value">
+                            @RenderCellValue(column)
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    @RenderCellValue(column)
+                }
+            </td>
+        }
+    </tr>
+}
 
 @code {
     [Parameter, EditorRequired]
@@ -53,10 +64,36 @@
     public Func<TItem, string?>? RowClassSelector { get; set; }
 
     [Parameter]
+    public RenderFragment<TItem>? RowTemplate { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool>? RowTemplateSelector { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyTreeRowTemplateContext<TItem>>? TreeRowTemplate { get; set; }
+
+    [Parameter]
+    public Func<TreeNodeState<TItem>, bool>? TreeRowTemplateSelector { get; set; }
+
+    [Parameter]
     public string ExpandLabel { get; set; } = "Expand";
 
     [Parameter]
     public string CollapseLabel { get; set; } = "Collapse";
+
+    private bool ShouldRenderTreeTemplate =>
+        TreeRowTemplate is not null && TreeRowTemplateSelector?.Invoke(Node) == true;
+
+    private bool ShouldRenderCustomTemplate =>
+        RowTemplate is not null && RowTemplateSelector?.Invoke(Node.Item) == true;
+
+    private FancyTreeRowTemplateContext<TItem> TreeRowTemplateContext => new()
+    {
+        Node = Node,
+        ToggleNode = ToggleNode,
+        ExpandLabel = ExpandLabel,
+        CollapseLabel = CollapseLabel
+    };
 
     private string? GetRowClass() => RowClassSelector?.Invoke(Node.Item);
 

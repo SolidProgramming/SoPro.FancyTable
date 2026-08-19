@@ -38,10 +38,13 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - **Same column model**: Reuse `FancyColumn<TItem>` definitions across flat and tree tables
 - **Context-aware search**: Search results keep matching nodes and their ancestors visible
 - **Configurable child lookup**: Supply nested data via `ChildItemsSelector` and optionally `HasChildrenSelector`
+- **Defensive null handling**: `null` child entries returned from consumer data are ignored during tree construction
 
 ### 🎨 Customization
 - **Custom toolbar**: Replace the default search bar via `ToolbarTemplate`
 - **Column templates**: Render custom cell content via `CellTemplate`
+- **Conditional row templates**: Replace the built-in row markup via `RowTemplate` when `RowTemplateSelector` matches
+- **Tree-specific row templates**: Use `TreeRowTemplate` when custom tree rows need node state or the toggle callback
 - **Header and cell styling**: Apply CSS classes via `HeaderClass` and `CellClass`
 - **Row styling**: Apply row CSS classes via `RowClassSelector`
 - **Search placeholder**: Customize the default search input placeholder via `SearchPlaceholder`
@@ -56,6 +59,8 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `ToolbarTemplate` | `RenderFragment?` | Custom toolbar content; replaces the default search bar |
 | `SearchPredicate` | `Func<TItem, string, bool>?` | Custom search logic; overrides default column-based search |
 | `RowClassSelector` | `Func<TItem, string?>?` | Returns CSS class(es) for each row |
+| `RowTemplate` | `RenderFragment<TItem>?` | Renders a complete custom table row (`<tr>...</tr>`) for matching items |
+| `RowTemplateSelector` | `Func<TItem, bool>?` | Chooses which items use `RowTemplate`; rows fall back to the built-in rendering when it returns `false` |
 
 ## Tree Table Parameters
 
@@ -67,6 +72,8 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
 | `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
 | `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
+| `TreeRowTemplate` | `RenderFragment<FancyTreeRowTemplateContext<TItem>>?` | Renders a complete custom tree row with access to node state and toggle callback |
+| `TreeRowTemplateSelector` | `Func<TreeNodeState<TItem>, bool>?` | Chooses which nodes use `TreeRowTemplate`; checked before `RowTemplate` |
 
 ## Column Configuration
 
@@ -109,6 +116,7 @@ This example covers:
 - custom header/cell classes
 - custom cell template
 - row-level classes (`RowClassSelector`)
+- conditional custom rows (`RowTemplate` + `RowTemplateSelector`)
 
 ```csharp
 @page "/fancy-table-demo"
@@ -143,7 +151,9 @@ This example covers:
         <FancyTable TItem="PersonRow"
                     Items="PeopleRows"
                     Columns="StyledPeopleColumns"
-                    RowClassSelector="GetPersonRowClass" />
+                    RowClassSelector="GetPersonRowClass"
+                    RowTemplate="PersonHighlightRow"
+                    RowTemplateSelector="ShouldRenderPersonHighlightRow" />
     </div>
 </div>
 
@@ -287,10 +297,20 @@ This example covers:
 
     private string? GetPersonRowClass(PersonRow person) => person.Age >= 35 ? "bg-warning" : null;
 
+    private bool ShouldRenderPersonHighlightRow(PersonRow person) => person.Age >= 35;
+
+    private RenderFragment<PersonRow> PersonHighlightRow => person => @<tr class="table-warning">
+        <td colspan="3">
+            <strong>@person.Name</strong> is flagged for review from @person.City and is currently @person.Age years old.
+        </td>
+    </tr>;
+
     private sealed record PersonRow(string Name, string City, int Age);
     private sealed record ProductRow(string Sku, string Category, decimal Price, int Stock, string Supplier);
 }
 ```
+
+`RowTemplate` must render the full row (`<tr>...</tr>`). If `RowTemplateSelector` is not set, or returns `false`, the component uses the normal column-based row rendering.
 
 ## Tree Table Example
 
@@ -361,6 +381,67 @@ This example covers:
         long SizeInBytes,
         bool IsFolder,
         IReadOnlyList<FolderNode> Children);
+}
+```
+
+`FancyTreeTable<TItem>` supports the same `RowTemplate` and `RowTemplateSelector` parameters. When you also need access to expand/collapse state or the actual toggle callback, use `TreeRowTemplate` with `TreeRowTemplateSelector` instead. `TreeRowTemplate` is evaluated first and receives a `FancyTreeRowTemplateContext<TItem>` containing `Node`, `ToggleNode`, `ExpandLabel`, and `CollapseLabel`. `ChildItemsSelector` may also return `null`, and any `null` child entries are ignored.
+
+Example for a collapsible section header row:
+
+```csharp
+<FancyTreeTable TItem="RuleRow"
+                Items="Rules"
+                Columns="RuleColumns"
+                ChildItemsSelector="row => row.Children"
+                HasChildrenSelector="row => row.Children.Count > 0"
+                TreeRowTemplate="SectionHeaderTemplate"
+                TreeRowTemplateSelector="node => node.Item.IsSectionHeader" />
+
+@code {
+    private static readonly RuleRow Rule_11_1 = new("11.1", "Allow HTTPS", "TCP", "443", "Any", "Server-A", "Allow", [], false);
+    private static readonly RuleRow Rule_11_2 = new("11.2", "Allow DNS", "UDP", "53", "Any", "DNS-1", "Allow", [], false);
+    private static readonly RuleRow Rule_11_3 = new("11.3", "Block Telnet", "TCP", "23", "Any", "Any", "Deny", [], false);
+
+    private IReadOnlyList<RuleRow> Rules =
+    [
+        new("", "Section Header", "", "", "", "", "", [Rule_11_1, Rule_11_2, Rule_11_3], IsSectionHeader: true)
+    ];
+
+    private IReadOnlyList<FancyColumn<RuleRow>> RuleColumns =>
+    [
+        new() { Key = "number", Title = "Rule", ValueSelector = x => x.Number },
+        new() { Key = "name", Title = "Name", ValueSelector = x => x.Name },
+        new() { Key = "protocol", Title = "Protocol", ValueSelector = x => x.Protocol },
+        new() { Key = "port", Title = "Port", ValueSelector = x => x.Port },
+        new() { Key = "source", Title = "Source", ValueSelector = x => x.Source },
+        new() { Key = "destination", Title = "Destination", ValueSelector = x => x.Destination },
+        new() { Key = "action", Title = "Action", ValueSelector = x => x.Action }
+    ];
+
+    private RenderFragment<FancyTreeRowTemplateContext<RuleRow>> SectionHeaderTemplate => context => @<tr class="table-secondary fw-bold">
+        <td colspan="7">
+            <button type="button"
+                    class="btn btn-link btn-sm text-decoration-none p-0 me-2"
+                    @onclick="() => context.ToggleNode.InvokeAsync(context.Node)"
+                    aria-label="@(context.Node.IsExpanded ? context.CollapseLabel : context.ExpandLabel)"
+                    aria-expanded="@context.Node.IsExpanded">
+                <i class="bi @(context.Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+            </button>
+            @context.Node.Item.Name
+            <span class="ms-2 text-muted">(@context.Node.Children.Count Regeln)</span>
+        </td>
+    </tr>;
+
+    private sealed record RuleRow(
+        string Number,
+        string Name,
+        string Protocol,
+        string Port,
+        string Source,
+        string Destination,
+        string Action,
+        IReadOnlyList<RuleRow> Children,
+        bool IsSectionHeader = false);
 }
 ```
 
