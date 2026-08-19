@@ -12,42 +12,40 @@ https://www.nuget.org/packages/SoPro.FancyTable
 
 ## Features
 
-### 🔍 Search
-- **Default search**: Automatically searches across all columns where `Searchable = true`
-- **Custom search predicates**: Define custom search logic via `SearchPredicate`
-- **Debounced input**: Search input applies with a `250ms` debounce
-- **Immediate search on Enter**: Press `Enter` to apply the current search text immediately
-- **Quick actions**: Search/clear button behavior in the default toolbar
-- **Flexible search text**: Configure custom search text extraction per column via `SearchTextSelector`
+### Search
+- Default search across all columns where `Searchable = true`
+- Custom search predicates via `SearchPredicate`
+- Debounced input with immediate apply on `Enter`
+- Flexible search text extraction per column via `SearchTextSelector`
 
-### 📊 Sorting
-- **Column sorting**: Click sortable column headers to sort ascending or descending
-- **Visual indicators**: Icons show current sort state (`bi-arrow-down-up`, `bi-sort-up`, `bi-sort-down`)
-- **Custom sort values**: Define custom sort comparisons per column via `SortValueSelector`
-- **Fallback sort value**: Falls back to `ValueSelector` when `SortValueSelector` is not set
-- **Toggle direction**: Click the same column header again to reverse sort order
-- **Tree-aware sorting**: In `FancyTreeTable`, sorting reorders only siblings within the same parent level
+### Sorting
+- Column sorting with ascending / descending toggle
+- Sort indicators in the header
+- Custom sort values via `SortValueSelector`
+- Tree-aware sorting that only reorders siblings within the same parent level
 
-### 👁️ Column Visibility
-- **Hide columns**: Eye-slash button on hideable column headers hides columns on demand
-- **Show hidden columns**: Dedicated section below the table displays hidden columns with restore buttons
-- **Flexible configuration**: Each column can be marked as hideable via `Hideable`
+### Column visibility
+- Hideable columns via `Hideable`
+- Hidden-column restore buttons below the table
 
-### 🌳 Hierarchical Data
-- **Expand/collapse**: `FancyTreeTable` renders nested rows with toggles in the first visible column
-- **Same column model**: Reuse `FancyColumn<TItem>` definitions across flat and tree tables
-- **Context-aware search**: Search results keep matching nodes and their ancestors visible
-- **Configurable child lookup**: Supply nested data via `ChildItemsSelector` and optionally `HasChildrenSelector`
-- **Defensive null handling**: `null` child entries returned from consumer data are ignored during tree construction
+### Hierarchical data
+- Expand/collapse in `FancyTreeTable`
+- Shared column model across flat and tree tables
+- Search keeps matching nodes and their ancestors visible
+- Configurable child lookup via `ChildItemsSelector`
+- Optional `HasChildrenSelector` optimization
+- Null child entries are ignored during tree construction
 
-### 🎨 Customization
-- **Custom toolbar**: Replace the default search bar via `ToolbarTemplate`
-- **Column templates**: Render custom cell content via `CellTemplate`
-- **Conditional row templates**: Replace the built-in row markup via `RowTemplate` when `RowTemplateSelector` matches
-- **Tree-specific row templates**: Use `TreeRowTemplate` when custom tree rows need node state or the toggle callback
-- **Header and cell styling**: Apply CSS classes via `HeaderClass` and `CellClass`
-- **Row styling**: Apply row CSS classes via `RowClassSelector`
-- **Search placeholder**: Customize the default search input placeholder via `SearchPlaceholder`
+### Customization
+- Custom toolbar via `ToolbarTemplate`
+- Custom cell content via `CellTemplate`
+- Full-row customization through a unified `RowTemplate`
+- Conditional row replacement via `RowTemplateSelector`
+- Unified row context for flat and tree tables via `FancyRowContext<TItem>`
+- Optional row attributes via `RowAttributesSelector`
+- Optional leading-content hook for the first cell via `RowLeadingContentTemplate`
+- Row classes via `RowClassSelector`
+- Header and cell styling via `HeaderClass` and `CellClass`
 
 ## Parameters
 
@@ -59,8 +57,10 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `ToolbarTemplate` | `RenderFragment?` | Custom toolbar content; replaces the default search bar |
 | `SearchPredicate` | `Func<TItem, string, bool>?` | Custom search logic; overrides default column-based search |
 | `RowClassSelector` | `Func<TItem, string?>?` | Returns CSS class(es) for each row |
-| `RowTemplate` | `RenderFragment<TItem>?` | Renders a complete custom table row (`<tr>...</tr>`) for matching items |
-| `RowTemplateSelector` | `Func<TItem, bool>?` | Chooses which items use `RowTemplate`; rows fall back to the built-in rendering when it returns `false` |
+| `RowAttributesSelector` | `Func<FancyRowContext<TItem>, IReadOnlyDictionary<string, object?>?>?` | Supplies additional attributes for the rendered `<tr>` |
+| `RowLeadingContentTemplate` | `RenderFragment<FancyRowContext<TItem>>?` | Renders extra content at the start of the first visible cell |
+| `RowTemplate` | `RenderFragment<FancyRowContext<TItem>>?` | Renders a complete custom table row (`<tr>...</tr>`) |
+| `RowTemplateSelector` | `Func<FancyRowContext<TItem>, bool>?` | Chooses which rows use `RowTemplate`; if omitted, `RowTemplate` applies to every row |
 
 ## Tree Table Parameters
 
@@ -72,8 +72,26 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
 | `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
 | `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
-| `TreeRowTemplate` | `RenderFragment<FancyTreeRowTemplateContext<TItem>>?` | Renders a complete custom tree row with access to node state and toggle callback |
-| `TreeRowTemplateSelector` | `Func<TreeNodeState<TItem>, bool>?` | Chooses which nodes use `TreeRowTemplate`; checked before `RowTemplate` |
+
+## Row Context
+
+`FancyRowContext<TItem>` is passed into `RowTemplate`, `RowTemplateSelector`, `RowAttributesSelector`, and `RowLeadingContentTemplate`.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Item` | `TItem` | The current row item |
+| `Columns` | `IReadOnlyList<FancyColumn<TItem>>` | Currently visible columns |
+| `VisibleColumnCount` | `int` | Count of visible columns, useful for `colspan` rows |
+| `IsTreeNode` | `bool` | Indicates whether the row comes from `FancyTreeTable` |
+| `Depth` | `int` | Tree depth for tree rows; `0` for flat tables |
+| `HasChildren` | `bool` | Whether the tree row has children |
+| `IsExpanded` | `bool` | Whether the tree row is currently expanded |
+| `CanToggle` | `bool` | Convenience flag for toggle availability |
+| `ToggleNode` | `EventCallback` | Expands or collapses the current tree node |
+| `ExpandLabel` | `string` | Accessible label for collapsed nodes |
+| `CollapseLabel` | `string` | Accessible label for expanded nodes |
+
+For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth = 0`, `HasChildren = false`, and `ToggleNode` is empty.
 
 ## Column Configuration
 
@@ -113,10 +131,10 @@ Add `SoPro.FancyTable.Components` to your `_Imports.razor` and rebuild the proje
 This example covers:
 - default toolbar
 - custom toolbar (`ToolbarTemplate`)
-- custom header/cell classes
 - custom cell template
 - row-level classes (`RowClassSelector`)
 - conditional custom rows (`RowTemplate` + `RowTemplateSelector`)
+- custom row callbacks
 
 ```csharp
 @page "/fancy-table-demo"
@@ -131,7 +149,7 @@ This example covers:
     </div>
 
     <div class="p-3 col">
-        <h5>Custom Toolbar (via ToolbarTemplate)</h5>
+        <h5>Custom Toolbar</h5>
         <FancyTable TItem="ProductRow"
                     Items="ProductRows"
                     Columns="ProductColumns">
@@ -147,13 +165,13 @@ This example covers:
     </div>
 
     <div class="p-3 col">
-        <h5>Custom Table header + row css classes & CellTemplates</h5>
+        <h5>Conditional custom rows</h5>
         <FancyTable TItem="PersonRow"
                     Items="PeopleRows"
                     Columns="StyledPeopleColumns"
                     RowClassSelector="GetPersonRowClass"
                     RowTemplate="PersonHighlightRow"
-                    RowTemplateSelector="ShouldRenderPersonHighlightRow" />
+                    RowTemplateSelector="context => context.Item.Age >= 35" />
     </div>
 </div>
 
@@ -201,9 +219,7 @@ This example covers:
     private IReadOnlyList<ProductRow> ProductRows =
     [
         new("SW-1001", "Switch", 149.99m, 42, "NetWare Ltd"),
-        new("FW-2300", "Firewall", 899.00m, 5, "SecureCore AG"),
-        new("AP-550", "Access Point", 219.50m, 18, "WaveLink"),
-        new("RTR-910", "Router", 399.00m, 9, "RouteStack Inc")
+        new("FW-2300", "Firewall", 899.00m, 5, "SecureCore AG")
     ];
 
     private IReadOnlyList<FancyColumn<ProductRow>> ProductColumns =>
@@ -215,17 +231,7 @@ This example covers:
             Sortable = true,
             Searchable = true,
             ValueSelector = product => product.Sku,
-            SortValueSelector = product => product.Sku,
-        },
-        new FancyColumn<ProductRow>
-        {
-            Key = "category",
-            Title = "Category",
-            Sortable = true,
-            Searchable = true,
-            Hideable = true,
-            ValueSelector = product => product.Category,
-            SortValueSelector = product => product.Category
+            SortValueSelector = product => product.Sku
         },
         new FancyColumn<ProductRow>
         {
@@ -235,25 +241,6 @@ This example covers:
             Searchable = false,
             ValueSelector = product => product.Price.ToString("C2"),
             SortValueSelector = product => product.Price
-        },
-        new FancyColumn<ProductRow>
-        {
-            Key = "stock",
-            Title = "In Stock",
-            Sortable = true,
-            Searchable = false,
-            ValueSelector = product => product.Stock,
-            SortValueSelector = product => product.Stock
-        },
-        new FancyColumn<ProductRow>
-        {
-            Key = "supplier",
-            Title = "Supplier",
-            Sortable = true,
-            Searchable = true,
-            Hideable = true,
-            ValueSelector = product => product.Supplier,
-            SortValueSelector = product => product.Supplier
         }
     ];
 
@@ -272,45 +259,34 @@ This example covers:
         },
         new FancyColumn<PersonRow>
         {
-            Key = "styled-city",
-            Title = "City",
-            Sortable = true,
-            Searchable = true,
-            HeaderClass = "text-bg-secondary",
-            CellClass = "fst-italic",
-            ValueSelector = person => person.City,
-            SortValueSelector = person => person.City
-        },
-        new FancyColumn<PersonRow>
-        {
             Key = "styled-age",
             Title = "Age",
             Sortable = true,
             Searchable = false,
-            Hideable = true,
-            HeaderClass = "text-bg-info",
-            CellClass = "text-center",
-            SortValueSelector = person => person.Age,
             CellTemplate = person => @<span class="badge text-bg-info-subtle border border-info text-info-emphasis">@person.Age yrs</span>
         }
     ];
 
     private string? GetPersonRowClass(PersonRow person) => person.Age >= 35 ? "bg-warning" : null;
 
-    private bool ShouldRenderPersonHighlightRow(PersonRow person) => person.Age >= 35;
-
-    private RenderFragment<PersonRow> PersonHighlightRow => person => @<tr class="table-warning">
-        <td colspan="3">
-            <strong>@person.Name</strong> is flagged for review from @person.City and is currently @person.Age years old.
+    private RenderFragment<FancyRowContext<PersonRow>> PersonHighlightRow => context => @<tr class="table-warning">
+        <td colspan="@context.VisibleColumnCount">
+            <strong>@context.Item.Name</strong> is flagged for review from @context.Item.City.
+            <button class="btn btn-sm btn-primary ms-2" @onclick="() => OpenPerson(context.Item)">Details</button>
         </td>
     </tr>;
+
+    private void OpenPerson(PersonRow person)
+    {
+        Console.WriteLine($"Open details for {person.Name}");
+    }
 
     private sealed record PersonRow(string Name, string City, int Age);
     private sealed record ProductRow(string Sku, string Category, decimal Price, int Stock, string Supplier);
 }
 ```
 
-`RowTemplate` must render the full row (`<tr>...</tr>`). If `RowTemplateSelector` is not set, or returns `false`, the component uses the normal column-based row rendering.
+`RowTemplate` renders the full row (`<tr>...</tr>`). If `RowTemplateSelector` is omitted, the custom row template applies to every row.
 
 ## Tree Table Example
 
@@ -319,83 +295,14 @@ This example covers:
 ```csharp
 @page "/fancy-tree-table-demo"
 
-<FancyTreeTable TItem="FolderNode"
-                Items="Folders"
-                Columns="FolderColumns"
-                ChildItemsSelector="node => node.Children"
-                HasChildrenSelector="node => node.Children.Count > 0"
-                SearchPlaceholder="Search folders or files..." />
-
-@code {
-    private IReadOnlyList<FolderNode> Folders =
-    [
-        new("Projects", "Folder", 0, true,
-        [
-            new("SoPro.FancyTable", "Folder", 0, true,
-            [
-                new("README.md", "File", 12_288, false, []),
-                new("Components", "Folder", 0, true,
-                [
-                    new("FancyTreeTable.razor", "File", 10_240, false, [])
-                ])
-            ]),
-            new("Archive", "Folder", 0, true, [])
-        ]),
-        new("Downloads", "Folder", 0, true, [])
-    ];
-
-    private IReadOnlyList<FancyColumn<FolderNode>> FolderColumns =>
-    [
-        new FancyColumn<FolderNode>
-        {
-            Key = "name",
-            Title = "Name",
-            Sortable = true,
-            Searchable = true,
-            ValueSelector = node => node.Name,
-            SortValueSelector = node => node.Name
-        },
-        new FancyColumn<FolderNode>
-        {
-            Key = "kind",
-            Title = "Type",
-            Sortable = true,
-            Searchable = true,
-            ValueSelector = node => node.Kind,
-            SortValueSelector = node => node.Kind
-        },
-        new FancyColumn<FolderNode>
-        {
-            Key = "size",
-            Title = "Size",
-            Sortable = true,
-            Searchable = false,
-            ValueSelector = node => node.IsFolder ? "-" : $"{node.SizeInBytes:N0} B",
-            SortValueSelector = node => node.SizeInBytes
-        }
-    ];
-
-    private sealed record FolderNode(
-        string Name,
-        string Kind,
-        long SizeInBytes,
-        bool IsFolder,
-        IReadOnlyList<FolderNode> Children);
-}
-```
-
-`FancyTreeTable<TItem>` supports the same `RowTemplate` and `RowTemplateSelector` parameters. When you also need access to expand/collapse state or the actual toggle callback, use `TreeRowTemplate` with `TreeRowTemplateSelector` instead. `TreeRowTemplate` is evaluated first and receives a `FancyTreeRowTemplateContext<TItem>` containing `Node`, `ToggleNode`, `ExpandLabel`, and `CollapseLabel`. `ChildItemsSelector` may also return `null`, and any `null` child entries are ignored.
-
-Example for a collapsible section header row:
-
-```csharp
 <FancyTreeTable TItem="RuleRow"
                 Items="Rules"
                 Columns="RuleColumns"
                 ChildItemsSelector="row => row.Children"
                 HasChildrenSelector="row => row.Children.Count > 0"
-                TreeRowTemplate="SectionHeaderTemplate"
-                TreeRowTemplateSelector="node => node.Item.IsSectionHeader" />
+                RowTemplate="SectionHeaderTemplate"
+                RowTemplateSelector="context => context.Item.IsSectionHeader"
+                SearchPlaceholder="Search rules..." />
 
 @code {
     private static readonly RuleRow Rule_11_1 = new("11.1", "Allow HTTPS", "TCP", "443", "Any", "Server-A", "Allow", [], false);
@@ -418,19 +325,25 @@ Example for a collapsible section header row:
         new() { Key = "action", Title = "Action", ValueSelector = x => x.Action }
     ];
 
-    private RenderFragment<FancyTreeRowTemplateContext<RuleRow>> SectionHeaderTemplate => context => @<tr class="table-secondary fw-bold">
-        <td colspan="7">
+    private RenderFragment<FancyRowContext<RuleRow>> SectionHeaderTemplate => context => @<tr class="table-secondary fw-bold">
+        <td colspan="@context.VisibleColumnCount">
             <button type="button"
                     class="btn btn-link btn-sm text-decoration-none p-0 me-2"
-                    @onclick="() => context.ToggleNode.InvokeAsync(context.Node)"
-                    aria-label="@(context.Node.IsExpanded ? context.CollapseLabel : context.ExpandLabel)"
-                    aria-expanded="@context.Node.IsExpanded">
-                <i class="bi @(context.Node.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                    @onclick="() => context.ToggleNode.InvokeAsync()"
+                    aria-label="@(context.IsExpanded ? context.CollapseLabel : context.ExpandLabel)"
+                    aria-expanded="@context.IsExpanded">
+                <i class="bi @(context.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
             </button>
-            @context.Node.Item.Name
-            <span class="ms-2 text-muted">(@context.Node.Children.Count Regeln)</span>
+            @context.Item.Name
+            <span class="ms-2 text-muted">(@context.Item.Children.Count Regeln)</span>
+            <button class="btn btn-sm btn-outline-primary ms-3" @onclick="() => InspectSection(context.Item)">Inspect</button>
         </td>
     </tr>;
+
+    private void InspectSection(RuleRow row)
+    {
+        Console.WriteLine($"Inspect section {row.Name}");
+    }
 
     private sealed record RuleRow(
         string Number,
@@ -445,7 +358,7 @@ Example for a collapsible section header row:
 }
 ```
 
-### Tree Search and Sorting Semantics
+## Tree Search and Sorting Semantics
 
 - Search shows matching nodes and their ancestors, so hits remain visible in context
 - Clearing the search restores the manual expand/collapse state from before the search
@@ -464,14 +377,14 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 
 ---
 
-## 🏁 Roadmap
+## Roadmap
 
-- [x] NuGet package release 📦
-- [ ] Pagination support (maybe with custom template) ⏭️
-- [ ] Localization support for default UI text (search placeholder, aria labels) 🌐
-- [ ] Column resizing and reordering 📏
-- [ ] Export to CSV/Excel 🖺
-- [ ] Row selection and bulk actions ✨
-- [ ] Dark Mode support 🌙
-- [ ] Accessibility improvements (ARIA roles, keyboard navigation) ♿
-- [ ] Performance optimizations for large datasets (virtualization) ⚡
+- [x] NuGet package release
+- [ ] Pagination support (maybe with custom template)
+- [ ] Localization support for default UI text (search placeholder, aria labels)
+- [ ] Column resizing and reordering
+- [ ] Export to CSV/Excel
+- [ ] Row selection and bulk actions
+- [ ] Dark Mode support
+- [ ] Accessibility improvements (ARIA roles, keyboard navigation)
+- [ ] Performance optimizations for large datasets (virtualization)
