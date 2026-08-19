@@ -1,3 +1,5 @@
+[![CodeQL Advanced](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml/badge.svg)](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml)
+
 # SoPro.FancyTable
 
 https://www.nuget.org/packages/SoPro.FancyTable
