@@ -1,7 +1,33 @@
 @typeparam TItem where TItem : notnull
 @implements IDisposable
 
-<div class="d-flex mb-2">
+@{
+    PagedNodesResult pagedNodes = GetPagedNodes();
+}
+
+<div class="fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    @if (ShouldRenderPageSizeSelector)
+    {
+        <div class="fancy-page-size">
+            @if (PageSizeTemplate is not null)
+            {
+                @PageSizeTemplate(pagedNodes.Context)
+            }
+            else
+            {
+                <label class="d-inline-flex align-items-center gap-2 small text-muted">
+                    <span>Rows per page</span>
+                    <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
+                        @foreach (int option in EffectivePageSizeOptions)
+                        {
+                            <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+    }
+
     @if (ToolbarTemplate is not null)
     {
         @ToolbarTemplate
@@ -56,7 +82,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (TreeNodeState<TItem> node in VisibleNodes)
+            @foreach (TreeNodeState<TItem> node in pagedNodes.Items)
             {
                 <FancyTreeRow TItem="TItem"
                               Node="node"
@@ -72,26 +98,77 @@
             }
         </tbody>
     </table>
-
-    @if (HiddenColumns.Count > 0)
-    {
-        <div class="mt-2 ps-2 py-1">
-            <small class="text-muted me-2">Hidden columns:</small>
-            @foreach (string key in HiddenColumns)
-            {
-                FancyColumn<TItem>? column = Columns.FirstOrDefault(c => c.Key == key);
-                if (column is not null)
-                {
-                    <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowColumn(key)">
-                        <i class="bi bi-eye me-1"></i>@column.Title
-                    </button>
-                }
-            }
-        </div>
-    }
 </div>
 
+@if (HiddenColumns.Count > 0)
+{
+    <div class="mt-2 ps-2 py-1">
+        <small class="text-muted me-2">Hidden columns:</small>
+        @foreach (string key in HiddenColumns)
+        {
+            FancyColumn<TItem>? column = Columns.FirstOrDefault(c => c.Key == key);
+            if (column is not null)
+            {
+                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowColumn(key)">
+                    <i class="bi bi-eye me-1"></i>@column.Title
+                </button>
+            }
+        }
+    </div>
+}
+
+@if (ShouldRenderPaginationFooter(pagedNodes.Context))
+{
+    <div class="fancy-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+        @if (PaginationTemplate is not null)
+        {
+            @PaginationTemplate(pagedNodes.Context)
+        }
+        else
+        {
+            <div class="fancy-pagination-summary text-muted small">
+                @if (PaginationSummaryTemplate is not null)
+                {
+                    @PaginationSummaryTemplate(pagedNodes.Context)
+                }
+                else if (ShowPaginationSummary)
+                {
+                    @GetDefaultPaginationSummary(pagedNodes.Context)
+                }
+            </div>
+
+            @if (pagedNodes.Context.PageCount > 1)
+            {
+                <div class="btn-group btn-group-sm" role="group" aria-label="Pagination">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@(!pagedNodes.Context.HasPreviousPage)"
+                            @onclick="pagedNodes.Context.GoToPreviousPage">
+                        Previous
+                    </button>
+                    @foreach (int pageNumber in GetVisiblePageNumbers(pagedNodes.Context))
+                    {
+                        <button type="button"
+                                class="btn @(pageNumber == pagedNodes.Context.CurrentPage ? "btn-primary" : "btn-outline-secondary")"
+                                @onclick="() => pagedNodes.Context.GoToPage(pageNumber)">
+                            @pageNumber
+                        </button>
+                    }
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@(!pagedNodes.Context.HasNextPage)"
+                            @onclick="pagedNodes.Context.GoToNextPage">
+                        Next
+                    </button>
+                </div>
+            }
+        }
+    </div>
+}
+
 @code {
+    private static readonly IReadOnlyList<int> DefaultPageSizeOptions = [10, 25, 50, 100];
+
     [Parameter, EditorRequired]
     public required IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
 
@@ -134,6 +211,39 @@
     [Parameter]
     public Func<FancyRowContext<TItem>, bool>? RowTemplateSelector { get; set; }
 
+    [Parameter]
+    public bool PaginationEnabled { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    [Parameter]
+    public EventCallback<int> PageSizeChanged { get; set; }
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback<int> CurrentPageChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<int>? PageSizeOptions { get; set; }
+
+    [Parameter]
+    public bool ShowPaginationSummary { get; set; } = true;
+
+    [Parameter]
+    public bool ShowPageSizeSelector { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyPaginationContext<TItem>>? PaginationSummaryTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyPaginationContext<TItem>>? PaginationTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<FancyPaginationContext<TItem>>? PageSizeTemplate { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
     private readonly List<TreeNodeState<TItem>> RootNodes = [];
@@ -142,39 +252,53 @@
     private string SearchText = string.Empty;
     private string AppliedSearchText = string.Empty;
     private Timer? debounceTimer;
+    private int paginationCurrentPage = 1;
+    private int paginationPageSize = 25;
+    private bool paginationStateInitialized;
 
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         Columns.Where(c => !HiddenColumns.Contains(c.Key));
 
     private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
-
-    private IEnumerable<TreeNodeState<TItem>> VisibleNodes
-    {
-        get
-        {
-            string filter = CurrentFilter;
-            List<TreeNodeState<TItem>> visibleNodes = [];
-
-            if (string.IsNullOrWhiteSpace(filter))
-            {
-                foreach (TreeNodeState<TItem> root in RootNodes)
-                    CollectExpandedNodes(root, visibleNodes);
-            }
-            else
-            {
-                foreach (TreeNodeState<TItem> root in RootNodes)
-                    CollectSearchNodes(root, filter, visibleNodes, out _);
-            }
-
-            return visibleNodes;
-        }
-    }
+    private bool IsPaginationActive => PaginationEnabled && PaginationPageSize > 0;
+    private bool ShouldRenderPageSizeSelector => PaginationEnabled && ShowPageSizeSelector;
+    private int PaginationPageSize => paginationPageSize > 0 ? paginationPageSize : 0;
 
     private string CurrentFilter =>
         string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
 
+    private IReadOnlyList<int> EffectivePageSizeOptions
+    {
+        get
+        {
+            IEnumerable<int> options = (PageSizeOptions ?? DefaultPageSizeOptions)
+                .Where(static option => option >= 0)
+                .Distinct()
+                .OrderBy(static option => option);
+
+            if (!options.Contains(0))
+            {
+                options = options.Append(0).OrderBy(static option => option);
+            }
+
+            if (PageSize >= 0 && !options.Contains(PageSize))
+            {
+                options = options.Append(PageSize).OrderBy(static option => option);
+            }
+
+            if (PaginationPageSize >= 0 && !options.Contains(PaginationPageSize))
+            {
+                options = options.Append(PaginationPageSize).OrderBy(static option => option);
+            }
+
+            List<int> normalizedOptions = options.ToList();
+            return normalizedOptions.Count > 0 ? normalizedOptions : [0, .. DefaultPageSizeOptions];
+        }
+    }
+
     protected override void OnParametersSet()
     {
+        SyncPaginationStateFromParameters();
         RebuildTree();
     }
 
@@ -237,6 +361,40 @@
 
     private bool MatchesSearch(TItem item, string filter) =>
         TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);
+
+    private PagedNodesResult GetPagedNodes()
+    {
+        List<TreeNodeState<TItem>> visibleNodes = BuildVisibleNodes();
+        FancyPaginationContext<TItem> paginationContext = BuildPaginationContext(
+            totalItemCount: RootNodes.Count,
+            filteredItemCount: visibleNodes.Count);
+
+        IReadOnlyList<TreeNodeState<TItem>> pagedItems = ApplyPagination(visibleNodes, paginationContext);
+        return new PagedNodesResult { Items = pagedItems, Context = paginationContext };
+    }
+
+    private List<TreeNodeState<TItem>> BuildVisibleNodes()
+    {
+        string filter = CurrentFilter;
+        List<TreeNodeState<TItem>> visibleNodes = [];
+
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            foreach (TreeNodeState<TItem> root in RootNodes)
+            {
+                CollectExpandedNodes(root, visibleNodes);
+            }
+        }
+        else
+        {
+            foreach (TreeNodeState<TItem> root in RootNodes)
+            {
+                CollectSearchNodes(root, filter, visibleNodes, out _);
+            }
+        }
+
+        return visibleNodes;
+    }
 
     private void CollectExpandedNodes(TreeNodeState<TItem> node, List<TreeNodeState<TItem>> visibleNodes)
     {
@@ -315,6 +473,7 @@
     private void ApplySearch()
     {
         AppliedSearchText = SearchText;
+        paginationCurrentPage = 1;
         StateHasChanged();
     }
 
@@ -322,6 +481,7 @@
     {
         SearchText = string.Empty;
         AppliedSearchText = string.Empty;
+        paginationCurrentPage = 1;
         StateHasChanged();
     }
 
@@ -335,9 +495,147 @@
             _ = InvokeAsync(() =>
             {
                 AppliedSearchText = SearchText;
+                paginationCurrentPage = 1;
                 StateHasChanged();
             });
         }, null, 250, Timeout.Infinite);
+    }
+
+    private FancyPaginationContext<TItem> BuildPaginationContext(int totalItemCount, int filteredItemCount)
+    {
+        int pageCount = !IsPaginationActive || filteredItemCount == 0
+            ? 1
+            : Math.Max(1, (int)Math.Ceiling(filteredItemCount / (double)PaginationPageSize));
+
+        int clampedPage = Math.Clamp(paginationCurrentPage, 1, pageCount);
+        if (clampedPage != paginationCurrentPage)
+        {
+            paginationCurrentPage = clampedPage;
+        }
+
+        int startItemIndex = filteredItemCount == 0 ? 0 : ((clampedPage - 1) * Math.Max(PaginationPageSize, 1)) + 1;
+        int endItemIndex = filteredItemCount == 0
+            ? 0
+            : (IsPaginationActive
+                ? Math.Min(filteredItemCount, clampedPage * PaginationPageSize)
+                : filteredItemCount);
+
+        return new FancyPaginationContext<TItem>(
+            currentPage: clampedPage,
+            pageSize: PaginationPageSize,
+            totalItemCount: totalItemCount,
+            filteredItemCount: filteredItemCount,
+            pageCount: pageCount,
+            startItemIndex: startItemIndex,
+            endItemIndex: endItemIndex,
+            goToPageAsync: SetCurrentPageAsync,
+            goToPreviousPageAsync: () => SetCurrentPageAsync(paginationCurrentPage - 1),
+            goToNextPageAsync: () => SetCurrentPageAsync(paginationCurrentPage + 1),
+            setPageSizeAsync: SetPageSizeAsync);
+    }
+
+    private IReadOnlyList<TreeNodeState<TItem>> ApplyPagination(
+        IReadOnlyList<TreeNodeState<TItem>> items,
+        FancyPaginationContext<TItem> paginationContext)
+    {
+        if (!IsPaginationActive)
+        {
+            return items;
+        }
+
+        int skip = (paginationContext.CurrentPage - 1) * PaginationPageSize;
+        return items.Skip(skip).Take(PaginationPageSize).ToList();
+    }
+
+    private void SyncPaginationStateFromParameters()
+    {
+        if (!paginationStateInitialized)
+        {
+            paginationCurrentPage = Math.Max(1, CurrentPage);
+            paginationPageSize = PageSize;
+            paginationStateInitialized = true;
+            return;
+        }
+
+        if (CurrentPageChanged.HasDelegate)
+        {
+            paginationCurrentPage = Math.Max(1, CurrentPage);
+        }
+
+        if (PageSizeChanged.HasDelegate)
+        {
+            paginationPageSize = PageSize;
+        }
+    }
+
+    private async Task SetCurrentPageAsync(int page)
+    {
+        int normalizedPage = Math.Max(1, page);
+        if (paginationCurrentPage == normalizedPage)
+        {
+            return;
+        }
+
+        paginationCurrentPage = normalizedPage;
+        await CurrentPageChanged.InvokeAsync(normalizedPage);
+    }
+
+    private async Task SetPageSizeAsync(int pageSize)
+    {
+        int normalizedPageSize = Math.Max(0, pageSize);
+        if (paginationPageSize == normalizedPageSize)
+        {
+            return;
+        }
+
+        paginationPageSize = normalizedPageSize;
+        paginationCurrentPage = 1;
+
+        await PageSizeChanged.InvokeAsync(normalizedPageSize);
+        await CurrentPageChanged.InvokeAsync(paginationCurrentPage);
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int selectedPageSize))
+        {
+            await SetPageSizeAsync(selectedPageSize);
+        }
+    }
+
+    private bool ShouldRenderPaginationFooter(FancyPaginationContext<TItem> context) =>
+        IsPaginationActive && (PaginationTemplate is not null || ShowPaginationSummary || context.PageCount > 1);
+
+    private string GetDefaultPaginationSummary(FancyPaginationContext<TItem> context)
+    {
+        if (context.FilteredItemCount == 0)
+        {
+            return context.TotalItemCount == 0 ? "No rows" : $"No matching rows ({context.TotalItemCount} total root items)";
+        }
+
+        return context.FilteredItemCount == context.TotalItemCount
+            ? $"Showing {context.StartItemIndex}-{context.EndItemIndex} of {context.FilteredItemCount}"
+            : $"Showing {context.StartItemIndex}-{context.EndItemIndex} of {context.FilteredItemCount} visible rows";
+    }
+
+    private IReadOnlyList<int> GetVisiblePageNumbers(FancyPaginationContext<TItem> context)
+    {
+        const int windowSize = 5;
+        int startPage = Math.Max(1, context.CurrentPage - 2);
+        int endPage = Math.Min(context.PageCount, startPage + windowSize - 1);
+
+        if ((endPage - startPage) < windowSize - 1)
+        {
+            startPage = Math.Max(1, endPage - windowSize + 1);
+        }
+
+        return Enumerable.Range(startPage, endPage - startPage + 1).ToList();
+    }
+
+    private sealed class PagedNodesResult
+    {
+        public required IReadOnlyList<TreeNodeState<TItem>> Items { get; init; }
+        public required FancyPaginationContext<TItem> Context { get; init; }
     }
 
     public void Dispose() => debounceTimer?.Dispose();

@@ -6,7 +6,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 
 ## Overview
 
-`FancyTable` is a reusable Blazor component that provides an interactive table experience with built-in support for searching, sorting, and column visibility management. It's designed to work with any data type through its generic `TItem` parameter.
+`FancyTable` is a reusable Blazor component that provides an interactive table experience with built-in support for searching, sorting, pagination, and column visibility management. It's designed to work with any data type through its generic `TItem` parameter.
 
 `FancyTreeTable` extends the same column model and interaction patterns to hierarchical datasets, so parent/child structures can be displayed with expand/collapse behavior.
 
@@ -27,6 +27,12 @@ https://www.nuget.org/packages/SoPro.FancyTable
 ### Column visibility
 - Hideable columns via `Hideable`
 - Hidden-column restore buttons below the table
+
+### Pagination
+- Optional local/client-side pagination for flat and tree tables
+- Bindable `CurrentPage` and `PageSize` state
+- Default footer pager with optional page-size selector
+- Custom pagination, summary, and page-size templates via `FancyPaginationContext<TItem>`
 
 ### Hierarchical data
 - Expand/collapse in `FancyTreeTable`
@@ -61,6 +67,17 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `RowLeadingContentTemplate` | `RenderFragment<FancyRowContext<TItem>>?` | Renders extra content at the start of the first visible cell |
 | `RowTemplate` | `RenderFragment<FancyRowContext<TItem>>?` | Renders a complete custom table row (`<tr>...</tr>`) |
 | `RowTemplateSelector` | `Func<FancyRowContext<TItem>, bool>?` | Chooses which rows use `RowTemplate`; if omitted, `RowTemplate` applies to every row |
+| `PaginationEnabled` | `bool` | Enables local pagination when `PageSize > 0` |
+| `PageSize` | `int` | Active page size; values `<= 0` effectively disable pagination |
+| `PageSizeChanged` | `EventCallback<int>` | Raised when the page size changes |
+| `CurrentPage` | `int` | Active 1-based page index |
+| `CurrentPageChanged` | `EventCallback<int>` | Raised when the page changes |
+| `PageSizeOptions` | `IReadOnlyList<int>?` | Available page-size options for the default selector |
+| `ShowPaginationSummary` | `bool` | Shows the default or custom summary area in the footer |
+| `ShowPageSizeSelector` | `bool` | Shows the default or custom page-size UI above the table |
+| `PaginationSummaryTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Custom summary content for the default footer |
+| `PaginationTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the visible footer pager area |
+| `PageSizeTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the page-size selector area above the table |
 
 ## Tree Table Parameters
 
@@ -92,6 +109,26 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `CollapseLabel` | `string` | Accessible label for expanded nodes |
 
 For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth = 0`, `HasChildren = false`, and `ToggleNode` is empty.
+
+## Pagination Context
+
+`FancyPaginationContext<TItem>` is passed into `PaginationSummaryTemplate`, `PaginationTemplate`, and `PageSizeTemplate`.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `CurrentPage` | `int` | Active 1-based page index |
+| `PageSize` | `int` | Active page size |
+| `TotalItemCount` | `int` | Unfiltered item count |
+| `FilteredItemCount` | `int` | Count after search/filtering |
+| `PageCount` | `int` | Number of available pages |
+| `StartItemIndex` | `int` | 1-based start index of the current page |
+| `EndItemIndex` | `int` | 1-based end index of the current page |
+| `HasPreviousPage` | `bool` | Whether a previous page exists |
+| `HasNextPage` | `bool` | Whether a next page exists |
+| `GoToPage(int)` | `Task` | Jumps to a specific page |
+| `GoToPreviousPage()` | `Task` | Moves to the previous page |
+| `GoToNextPage()` | `Task` | Moves to the next page |
+| `SetPageSize(int)` | `Task` | Updates the page size and resets to page 1 |
 
 ## Column Configuration
 
@@ -145,6 +182,9 @@ This example covers:
         <FancyTable TItem="PersonRow"
                     Items="PeopleRows"
                     Columns="PeopleColumns"
+                    PaginationEnabled="true"
+                    PageSize="10"
+                    ShowPageSizeSelector="true"
                     SearchPlaceholder="Search name or city..." />
     </div>
 
@@ -288,6 +328,8 @@ This example covers:
 
 `RowTemplate` renders the full row (`<tr>...</tr>`). If `RowTemplateSelector` is omitted, the custom row template applies to every row.
 
+When pagination is enabled, `FancyTable` paginates after search and sorting. `CurrentPage` and `PageSize` can be bound to keep state stable across parent rerenders.
+
 ## Tree Table Example
 
 `FancyTreeTable<TItem>` works with nested data while keeping the same column definition style:
@@ -300,6 +342,9 @@ This example covers:
                 Columns="RuleColumns"
                 ChildItemsSelector="row => row.Children"
                 HasChildrenSelector="row => row.Children.Count > 0"
+                PaginationEnabled="true"
+                PageSize="5"
+                ShowPageSizeSelector="true"
                 RowTemplate="SectionHeaderTemplate"
                 RowTemplateSelector="context => context.Item.IsSectionHeader"
                 SearchPlaceholder="Search rules..." />
@@ -380,7 +425,7 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 ## Roadmap
 
 - [x] NuGet package release
-- [ ] Pagination support (maybe with custom template)
+- [x] Pagination support with optional custom templates
 - [ ] Localization support for default UI text (search placeholder, aria labels)
 - [ ] Column resizing and reordering
 - [ ] Export to CSV/Excel

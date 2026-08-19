@@ -16,6 +16,22 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+.fancy-table-topbar {
+    min-height: 2rem;
+}
+
+.fancy-page-size {
+    flex: 0 0 auto;
+}
+
+.fancy-pagination {
+    min-height: 2rem;
+}
+
+::deep .fancy-pagination-summary {
+    min-height: 1.5rem;
+}
+
 ::deep thead {
     background-color: #f8f9fa;
     border-bottom: 2px solid #dee2e6;
