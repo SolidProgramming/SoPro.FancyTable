@@ -102,6 +102,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 |-----------|------|-------------|
 | `ChildItemsSelector` | `Func<TItem, IEnumerable<TItem>?>` | Returns the child items for a given node (required) |
 | `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
+| `InitiallyExpandedSelector` | `Func<TItem, bool>?` | Optional initial state provider used to seed each node's expand/collapse state the first time it appears |
 | `Texts` | `FancyTableTexts?` | Centralized overrides for built-in UI labels and summary text |
 | `TreeActionsTemplate` | `RenderFragment<FancyTreeTableContext<TItem>>?` | Renders custom tree-level actions such as expand/collapse all |
 | `TreeActionsContainerClass` | `string?` | Additional CSS classes for the tree actions wrapper |

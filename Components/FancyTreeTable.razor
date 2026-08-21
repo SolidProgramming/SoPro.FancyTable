@@ -192,6 +192,9 @@
     public Func<TItem, bool>? HasChildrenSelector { get; set; }
 
     [Parameter]
+    public Func<TItem, bool>? InitiallyExpandedSelector { get; set; }
+
+    [Parameter]
     public FancyTableTexts? Texts { get; set; }
 
     [Parameter]
@@ -349,6 +352,8 @@
             TreeNodeState<TItem> rootNode = BuildNode(item, depth: 0, parent: null, ancestors: []);
             RootNodes.Add(rootNode);
         }
+
+        RemoveObsoleteExpandedStates();
     }
 
     private TreeNodeState<TItem> BuildNode(
@@ -366,13 +371,15 @@
         }
 
         List<TItem> orderedChildren = ApplySiblingSort(childItems).ToList();
+        bool hasChildren = HasChildrenSelector?.Invoke(item) ?? orderedChildren.Count > 0;
+        bool isExpanded = GetOrInitializeExpandedState(item);
         TreeNodeState<TItem> node = new()
         {
             Item = item,
             Depth = depth,
             Parent = parent,
-            HasChildren = HasChildrenSelector?.Invoke(item) ?? orderedChildren.Count > 0,
-            IsExpanded = ExpandedStates.TryGetValue(item, out bool isExpanded) && isExpanded,
+            HasChildren = hasChildren,
+            IsExpanded = hasChildren && isExpanded,
             Children = []
         };
 
@@ -504,31 +511,34 @@
 
     private void ShowColumn(string key) => HiddenColumns.Remove(key);
 
+    private bool GetOrInitializeExpandedState(TItem item)
+    {
+        if (ExpandedStates.TryGetValue(item, out bool isExpanded))
+        {
+            return isExpanded;
+        }
+
+        bool initialState = InitiallyExpandedSelector?.Invoke(item) ?? false;
+        ExpandedStates[item] = initialState;
+        return initialState;
+    }
+
     private Task ToggleNodeAsync(TreeNodeState<TItem> node)
     {
         node.IsExpanded = !node.IsExpanded;
-        if (node.IsExpanded)
-        {
-            ExpandedStates[node.Item] = true;
-        }
-        else
-        {
-            ExpandedStates.Remove(node.Item);
-        }
+        ExpandedStates[node.Item] = node.IsExpanded;
 
         return Task.CompletedTask;
     }
 
     public async Task ExpandAllAsync()
     {
-        ExpandedStates.Clear();
         SetExpandedStateForAllNodes(expanded: true);
         await InvokeAsync(StateHasChanged);
     }
 
     public async Task CollapseAllAsync()
     {
-        ExpandedStates.Clear();
         SetExpandedStateForAllNodes(expanded: false);
         await InvokeAsync(StateHasChanged);
     }
@@ -639,15 +649,45 @@
             {
                 ExpandedStates[node.Item] = true;
             }
+            else
+            {
+                ExpandedStates[node.Item] = false;
+            }
         }
         else
         {
             node.IsExpanded = false;
+            ExpandedStates[node.Item] = false;
         }
 
         foreach (TreeNodeState<TItem> child in node.Children)
         {
             SetExpandedStateRecursive(child, expanded);
+        }
+    }
+
+    private void RemoveObsoleteExpandedStates()
+    {
+        HashSet<TItem> activeItems = [];
+        foreach (TreeNodeState<TItem> rootNode in RootNodes)
+        {
+            CollectNodeItems(rootNode, activeItems);
+        }
+
+        List<TItem> obsoleteItems = ExpandedStates.Keys.Where(key => !activeItems.Contains(key)).ToList();
+        foreach (TItem obsoleteItem in obsoleteItems)
+        {
+            ExpandedStates.Remove(obsoleteItem);
+        }
+    }
+
+    private static void CollectNodeItems(TreeNodeState<TItem> node, HashSet<TItem> activeItems)
+    {
+        activeItems.Add(node.Item);
+
+        foreach (TreeNodeState<TItem> child in node.Children)
+        {
+            CollectNodeItems(child, activeItems);
         }
     }
 
