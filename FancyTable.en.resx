@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="RowsPerPageLabel" xml:space="preserve">
+    <value>Rows per page</value>
+  </data>
+  <data name="AllItemsLabel" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="HiddenColumnsLabel" xml:space="preserve">
+    <value>Hidden columns:</value>
+  </data>
+  <data name="PaginationAriaLabel" xml:space="preserve">
+    <value>Pagination</value>
+  </data>
+  <data name="PreviousPageLabel" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="NextPageLabel" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="NoRowsLabel" xml:space="preserve">
+    <value>No rows</value>
+  </data>
+  <data name="NoMatchingRowsFormat" xml:space="preserve">
+    <value>No matching rows</value>
+  </data>
+  <data name="NoMatchingRowsWithTotalFormat" xml:space="preserve">
+    <value>No matching rows ({0} total)</value>
+  </data>
+  <data name="ShowingItemsFormat" xml:space="preserve">
+    <value>Showing {0}-{1} of {2}</value>
+  </data>
+  <data name="ShowingFilteredItemsFormat" xml:space="preserve">
+    <value>Showing {0}-{1} of {2} filtered rows ({3} total)</value>
+  </data>
+  <data name="ExpandLabel" xml:space="preserve">
+    <value>Expand</value>
+  </data>
+  <data name="CollapseLabel" xml:space="preserve">
+    <value>Collapse</value>
+  </data>
+  <data name="NoMatchingRootItemsFormat" xml:space="preserve">
+    <value>No matching rows ({0} total root items)</value>
+  </data>
+  <data name="ShowingVisibleRowsFormat" xml:space="preserve">
+    <value>Showing {0}-{1} of {2} visible rows</value>
+  </data>
+</root>

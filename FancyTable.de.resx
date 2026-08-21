@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Suchen</value>
+  </data>
+  <data name="RowsPerPageLabel" xml:space="preserve">
+    <value>Zeilen pro Seite</value>
+  </data>
+  <data name="AllItemsLabel" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="HiddenColumnsLabel" xml:space="preserve">
+    <value>Ausgeblendete Spalten:</value>
+  </data>
+  <data name="PaginationAriaLabel" xml:space="preserve">
+    <value>Seitennavigation</value>
+  </data>
+  <data name="PreviousPageLabel" xml:space="preserve">
+    <value>Zurueck</value>
+  </data>
+  <data name="NextPageLabel" xml:space="preserve">
+    <value>Weiter</value>
+  </data>
+  <data name="NoRowsLabel" xml:space="preserve">
+    <value>Keine Zeilen</value>
+  </data>
+  <data name="NoMatchingRowsFormat" xml:space="preserve">
+    <value>Keine passenden Zeilen</value>
+  </data>
+  <data name="NoMatchingRowsWithTotalFormat" xml:space="preserve">
+    <value>Keine passenden Zeilen ({0} insgesamt)</value>
+  </data>
+  <data name="ShowingItemsFormat" xml:space="preserve">
+    <value>Zeige {0}-{1} von {2}</value>
+  </data>
+  <data name="ShowingFilteredItemsFormat" xml:space="preserve">
+    <value>Zeige {0}-{1} von {2} gefilterten Zeilen ({3} insgesamt)</value>
+  </data>
+  <data name="ExpandLabel" xml:space="preserve">
+    <value>Aufklappen</value>
+  </data>
+  <data name="CollapseLabel" xml:space="preserve">
+    <value>Zuklappen</value>
+  </data>
+  <data name="NoMatchingRootItemsFormat" xml:space="preserve">
+    <value>Keine passenden Zeilen ({0} Root-Elemente insgesamt)</value>
+  </data>
+  <data name="ShowingVisibleRowsFormat" xml:space="preserve">
+    <value>Zeige {0}-{1} von {2} sichtbaren Zeilen</value>
+  </data>
+</root>

@@ -1,5 +1,6 @@
 @typeparam TItem where TItem : notnull
 @implements IDisposable
+@using System.Globalization
 
 @{
     PagedNodesResult pagedNodes = GetPagedNodes();
@@ -16,11 +17,11 @@
             else
             {
                 <label class="d-inline-flex align-items-center gap-2 small text-muted">
-                    <span>Rows per page</span>
+                    <span>@ResolvedRowsPerPageLabel</span>
                     <select class="form-select form-select-sm w-auto" value="@PaginationPageSize" @onchange="OnPageSizeChanged">
                         @foreach (int option in EffectivePageSizeOptions)
                         {
-                            <option value="@option">@(option == 0 ? "All" : option.ToString())</option>
+                            <option value="@option">@(option == 0 ? ResolvedAllItemsLabel : option.ToString(CultureInfo.CurrentCulture))</option>
                         }
                     </select>
                 </label>
@@ -37,7 +38,7 @@
     else
     {
         <div class="@GetToolbarContainerClass()">
-            <input class="form-control form-control-md" placeholder="@SearchPlaceholder" value="@SearchText" @oninput="OnSearchInput" @onkeyup="HandleSearchKeyPress" />
+            <input class="form-control form-control-md" placeholder="@ResolvedSearchPlaceholder" value="@SearchText" @oninput="OnSearchInput" @onkeyup="HandleSearchKeyPress" />
 
             @if (string.IsNullOrWhiteSpace(SearchText))
             {
@@ -102,8 +103,8 @@
                               RowLeadingContentTemplate="RowLeadingContentTemplate"
                               RowTemplate="RowTemplate"
                               RowTemplateSelector="RowTemplateSelector"
-                              ExpandLabel="ExpandLabel"
-                              CollapseLabel="CollapseLabel" />
+                              ExpandLabel="ResolvedExpandLabel"
+                              CollapseLabel="ResolvedCollapseLabel" />
             }
         </tbody>
     </table>
@@ -112,7 +113,7 @@
 @if (HiddenColumns.Count > 0)
 {
     <div class="mt-2 ps-2 py-1">
-        <small class="text-muted me-2">Hidden columns:</small>
+        <small class="text-muted me-2">@ResolvedHiddenColumnsLabel</small>
         @foreach (string key in HiddenColumns)
         {
             FancyColumn<TItem>? column = Columns.FirstOrDefault(c => c.Key == key);
@@ -148,12 +149,12 @@
 
             @if (pagedNodes.Context.PageCount > 1)
             {
-                <div class="btn-group btn-group-sm" role="group" aria-label="Pagination">
+                <div class="btn-group btn-group-sm" role="group" aria-label="@ResolvedPaginationAriaLabel">
                     <button type="button"
                             class="btn btn-outline-secondary"
                             disabled="@(!pagedNodes.Context.HasPreviousPage)"
                             @onclick="pagedNodes.Context.GoToPreviousPage">
-                        Previous
+                        @ResolvedPreviousPageLabel
                     </button>
                     @foreach (int pageNumber in GetVisiblePageNumbers(pagedNodes.Context))
                     {
@@ -167,7 +168,7 @@
                             class="btn btn-outline-secondary"
                             disabled="@(!pagedNodes.Context.HasNextPage)"
                             @onclick="pagedNodes.Context.GoToNextPage">
-                        Next
+                        @ResolvedNextPageLabel
                     </button>
                 </div>
             }
@@ -191,13 +192,7 @@
     public Func<TItem, bool>? HasChildrenSelector { get; set; }
 
     [Parameter]
-    public string SearchPlaceholder { get; set; } = "Search";
-
-    [Parameter]
-    public string ExpandLabel { get; set; } = "Expand";
-
-    [Parameter]
-    public string CollapseLabel { get; set; } = "Collapse";
+    public FancyTableTexts? Texts { get; set; }
 
     [Parameter]
     public RenderFragment? ToolbarTemplate { get; set; }
@@ -285,6 +280,17 @@
     private int paginationCurrentPage = 1;
     private int paginationPageSize = 25;
     private bool paginationStateInitialized;
+
+    private FancyTableTexts ResolvedTexts => Texts ?? FancyTableTexts.Default;
+    private string ResolvedSearchPlaceholder => ResolvedTexts.SearchPlaceholder;
+    private string ResolvedRowsPerPageLabel => ResolvedTexts.RowsPerPageLabel;
+    private string ResolvedAllItemsLabel => ResolvedTexts.AllItemsLabel;
+    private string ResolvedHiddenColumnsLabel => ResolvedTexts.HiddenColumnsLabel;
+    private string ResolvedPaginationAriaLabel => ResolvedTexts.PaginationAriaLabel;
+    private string ResolvedPreviousPageLabel => ResolvedTexts.PreviousPageLabel;
+    private string ResolvedNextPageLabel => ResolvedTexts.NextPageLabel;
+    private string ResolvedExpandLabel => ResolvedTexts.ExpandLabel;
+    private string ResolvedCollapseLabel => ResolvedTexts.CollapseLabel;
 
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         Columns.Where(c => !HiddenColumns.Contains(c.Key));
@@ -432,10 +438,14 @@
         visibleNodes.Add(node);
 
         if (!node.IsExpanded)
+        {
             return;
+        }
 
         foreach (TreeNodeState<TItem> child in node.Children)
+        {
             CollectExpandedNodes(child, visibleNodes);
+        }
     }
 
     private bool CollectSearchNodes(
@@ -456,7 +466,9 @@
 
         includeNode = matchesSelf || childMatches.Count > 0;
         if (!includeNode)
+        {
             return false;
+        }
 
         visibleNodes.Insert(insertIndex, node);
         visibleNodes.AddRange(childMatches);
@@ -466,7 +478,9 @@
     private void SortBy(string columnKey)
     {
         if (SortColumnKey == columnKey)
+        {
             SortAscending = !SortAscending;
+        }
         else
         {
             SortColumnKey = columnKey;
@@ -478,11 +492,16 @@
 
     private string GetSortIcon(string key)
     {
-        if (SortColumnKey != key) return "bi-arrow-down-up";
+        if (SortColumnKey != key)
+        {
+            return "bi-arrow-down-up";
+        }
+
         return SortAscending ? "bi-sort-up" : "bi-sort-down";
     }
 
     private void HideColumn(string key) => HiddenColumns.Add(key);
+
     private void ShowColumn(string key) => HiddenColumns.Remove(key);
 
     private Task ToggleNodeAsync(TreeNodeState<TItem> node)
@@ -742,12 +761,14 @@
     {
         if (context.FilteredItemCount == 0)
         {
-            return context.TotalItemCount == 0 ? "No rows" : $"No matching rows ({context.TotalItemCount} total root items)";
+            return context.TotalItemCount == 0
+                ? ResolvedTexts.NoRowsLabel
+                : FormatResolvedText(ResolvedTexts.NoMatchingRootItemsFormat, context.TotalItemCount);
         }
 
         return context.FilteredItemCount == context.TotalItemCount
-            ? $"Showing {context.StartItemIndex}-{context.EndItemIndex} of {context.FilteredItemCount}"
-            : $"Showing {context.StartItemIndex}-{context.EndItemIndex} of {context.FilteredItemCount} visible rows";
+            ? FormatResolvedText(ResolvedTexts.ShowingItemsFormat, context.StartItemIndex, context.EndItemIndex, context.FilteredItemCount)
+            : FormatResolvedText(ResolvedTexts.ShowingVisibleRowsFormat, context.StartItemIndex, context.EndItemIndex, context.FilteredItemCount);
     }
 
     private IReadOnlyList<int> GetVisiblePageNumbers(FancyPaginationContext<TItem> context)
@@ -779,6 +800,9 @@
     private static string CombineClasses(string baseClass, string? additionalClass) =>
         string.IsNullOrWhiteSpace(additionalClass) ? baseClass : $"{baseClass} {additionalClass}";
 
+    private static string FormatResolvedText(string format, params object[] args) =>
+        string.Format(CultureInfo.CurrentCulture, format, args);
+
     private sealed class PagedNodesResult
     {
         public required IReadOnlyList<TreeNodeState<TItem>> Items { get; init; }
@@ -794,5 +818,3 @@
 
     public void Dispose() => debounceTimer?.Dispose();
 }
-
-

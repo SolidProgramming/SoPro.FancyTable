@@ -37,6 +37,11 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Default footer pager with optional page-size selector
 - Custom pagination, summary, and page-size templates via `FancyPaginationContext<TItem>`
 
+### Localization
+- Centralized default UI texts via `FancyTableTexts`
+- Optional per-table text overrides through the `Texts` parameter
+- Bundled `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` for future resource-based integration
+
 ### Hierarchical data
 - Expand/collapse in `FancyTreeTable`
 - Expand all / collapse all via `TreeActionsTemplate` or `@ref`
@@ -64,7 +69,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 |-----------|------|-------------|
 | `Items` | `IReadOnlyList<TItem>` | The data items to display in the table (required) |
 | `Columns` | `IReadOnlyList<FancyColumn<TItem>>` | Column configuration (required) |
-| `SearchPlaceholder` | `string` | Placeholder text for the default search input (default: `"Search"`) |
+| `Texts` | `FancyTableTexts?` | Centralized overrides for built-in UI labels and summary text |
 | `ToolbarTemplate` | `RenderFragment?` | Custom toolbar content; replaces the default search bar |
 | `SearchPredicate` | `Func<TItem, string, bool>?` | Custom search logic; overrides default column-based search |
 | `RowClassSelector` | `Func<TItem, string?>?` | Returns CSS class(es) for each row |
@@ -97,8 +102,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 |-----------|------|-------------|
 | `ChildItemsSelector` | `Func<TItem, IEnumerable<TItem>?>` | Returns the child items for a given node (required) |
 | `HasChildrenSelector` | `Func<TItem, bool>?` | Optional optimization to indicate whether a node should render an expand/collapse toggle |
-| `ExpandLabel` | `string` | Accessible label for collapsed nodes (default: `"Expand"`) |
-| `CollapseLabel` | `string` | Accessible label for expanded nodes (default: `"Collapse"`) |
+| `Texts` | `FancyTableTexts?` | Centralized overrides for built-in UI labels and summary text |
 | `TreeActionsTemplate` | `RenderFragment<FancyTreeTableContext<TItem>>?` | Renders custom tree-level actions such as expand/collapse all |
 | `TreeActionsContainerClass` | `string?` | Additional CSS classes for the tree actions wrapper |
 
@@ -162,6 +166,28 @@ For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth 
 | `GoToNextPage()` | `Task` | Moves to the next page |
 | `SetPageSize(int)` | `Task` | Updates the page size and resets to page 1 |
 
+## Localization
+
+`FancyTableTexts` lets you override all package-owned default UI text without requiring direct `IStringLocalizer` wiring inside the library.
+
+Example:
+
+```csharp
+private static readonly FancyTableTexts GermanTexts = FancyTableTexts.Default with
+{
+    SearchPlaceholder = "Suchen",
+    RowsPerPageLabel = "Zeilen pro Seite",
+    AllItemsLabel = "Alle",
+    HiddenColumnsLabel = "Ausgeblendete Spalten:",
+    PreviousPageLabel = "Zurueck",
+    NextPageLabel = "Weiter",
+    ExpandLabel = "Aufklappen",
+    CollapseLabel = "Zuklappen"
+};
+```
+
+The package also includes `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` so the same string catalog is already available for a future resource-driven integration layer.
+
 ## Column Configuration
 
 Each column is configured using `FancyColumn<TItem>`:
@@ -217,7 +243,7 @@ This example covers:
                     PaginationEnabled="true"
                     PageSize="10"
                     ShowPageSizeSelector="true"
-                    SearchPlaceholder="Search name or city..." />
+                    Texts="DemoTexts" />
     </div>
 
     <div class="p-3 col">
@@ -387,10 +413,19 @@ Wrapper class parameters append to the built-in layout classes, so utility class
                 TreeActionsTemplate="RuleTreeActions"
                 RowTemplate="SectionHeaderTemplate"
                 RowTemplateSelector="context => context.Item.IsSectionHeader"
-                SearchPlaceholder="Search rules..." />
+                Texts="RuleTableTexts" />
 
 @code {
     private FancyTreeTable<RuleRow>? RuleTable;
+    private static readonly FancyTableTexts DemoTexts = FancyTableTexts.Default with
+    {
+        SearchPlaceholder = "Search name or city..."
+    };
+
+    private static readonly FancyTableTexts RuleTableTexts = FancyTableTexts.Default with
+    {
+        SearchPlaceholder = "Search rules..."
+    };
 
     private static readonly RuleRow Rule_11_1 = new("11.1", "Allow HTTPS", "TCP", "443", "Any", "Server-A", "Allow", [], false);
     private static readonly RuleRow Rule_11_2 = new("11.2", "Allow DNS", "UDP", "53", "Any", "DNS-1", "Allow", [], false);
@@ -496,7 +531,7 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 
 - [x] NuGet package release
 - [x] Pagination support with optional custom templates
-- [ ] Localization support for default UI text (search placeholder, aria labels)
+- [x] Localization support for default UI text
 - [ ] Column resizing and reordering
 - [ ] Export to CSV/Excel
 - [ ] Detail rows / expandable row content
