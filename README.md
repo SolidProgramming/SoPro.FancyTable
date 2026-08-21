@@ -274,6 +274,11 @@ This example covers:
 </div>
 
 @code {
+    private static readonly FancyTableTexts DemoTexts = FancyTableTexts.Default with
+    {
+        SearchPlaceholder = "Search name or city..."
+    };
+
     private IReadOnlyList<PersonRow> PeopleRows =
     [
         new("Alice", "Berlin", 31),
@@ -417,10 +422,6 @@ Wrapper class parameters append to the built-in layout classes, so utility class
 
 @code {
     private FancyTreeTable<RuleRow>? RuleTable;
-    private static readonly FancyTableTexts DemoTexts = FancyTableTexts.Default with
-    {
-        SearchPlaceholder = "Search name or city..."
-    };
 
     private static readonly FancyTableTexts RuleTableTexts = FancyTableTexts.Default with
     {
@@ -479,7 +480,7 @@ Wrapper class parameters append to the built-in layout classes, so utility class
                 class="btn btn-sm btn-outline-dark"
                 disabled="@(RuleTable is null)"
                 @onclick="ExpandViaReferenceAsync">
-            Expand via @ref
+            Expand via @@ref
         </button>
         <span class="small text-muted">
             @context.VisibleNodeCount visible rows, @context.ExpandedNodeCount expanded nodes
