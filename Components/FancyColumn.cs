@@ -8,6 +8,12 @@ public sealed class FancyColumn<TItem>
     public bool Sortable { get; init; }
     public bool Searchable { get; init; } = true;
     public bool Hideable { get; init; }
+    public bool Resizable { get; init; } = true;
+    public bool Reorderable { get; init; } = true;
+
+    public double? Width { get; init; }
+    public double? MinWidth { get; init; }
+    public double? MaxWidth { get; init; }
 
     public string? HeaderClass { get; init; }
     public string? CellClass { get; init; }

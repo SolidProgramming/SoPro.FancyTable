@@ -31,6 +31,13 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Hideable columns via `Hideable`
 - Hidden-column restore buttons below the table
 
+### Column layout
+- Opt-in resizing and reordering for flat and tree tables
+- Content-based natural widths with optional `Width`, `MinWidth`, and `MaxWidth`
+- Mouse, touch, pen, and keyboard interaction without third-party JavaScript dependencies
+- Persistable order and widths through `InitialColumnLayout` and `ColumnLayoutChanged`
+- Click-to-expand ellipsis for constrained values rendered by `ValueSelector`
+
 ### Pagination
 - Optional local/client-side pagination for flat and tree tables
 - Bindable `CurrentPage` and `PageSize` state
@@ -93,6 +100,10 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `PageSizeContainerClass` | `string?` | Additional CSS classes for the page-size wrapper |
 | `PaginationContainerClass` | `string?` | Additional CSS classes for the pagination footer wrapper |
 | `PaginationSummaryClass` | `string?` | Additional CSS classes for the pagination summary wrapper |
+| `EnableColumnResizing` | `bool` | Enables resize handles; disabled by default |
+| `EnableColumnReordering` | `bool` | Enables reorder handles; disabled by default |
+| `InitialColumnLayout` | `IReadOnlyList<FancyColumnLayout>?` | Initial order and optional widths, applied once per component instance |
+| `ColumnLayoutChanged` | `EventCallback<IReadOnlyList<FancyColumnLayout>>` | Raised with the complete normalized layout after a resize or reorder |
 
 ## Tree Table Parameters
 
@@ -200,12 +211,40 @@ Each column is configured using `FancyColumn<TItem>`:
 | `Sortable` | `bool` | Whether the column can be sorted |
 | `Searchable` | `bool` | Whether the column is included in search (default: `true`) |
 | `Hideable` | `bool` | Whether the column can be hidden by the user |
+| `Resizable` | `bool` | Whether the column can be resized when resizing is enabled (default: `true`) |
+| `Reorderable` | `bool` | Whether the column can be reordered when reordering is enabled (default: `true`) |
+| `Width` | `double?` | Initial width in pixels; natural content width is used when omitted |
+| `MinWidth` | `double?` | Optional minimum resize width in pixels |
+| `MaxWidth` | `double?` | Optional maximum automatic and resize width in pixels |
 | `HeaderClass` | `string?` | CSS class applied to the header cell |
 | `CellClass` | `string?` | CSS class applied to data cells |
 | `ValueSelector` | `Func<TItem, object?>?` | Extracts the value to display for each row |
 | `SortValueSelector` | `Func<TItem, IComparable?>?` | Extracts the value used for sorting (falls back to `ValueSelector`) |
 | `SearchTextSelector` | `Func<TItem, string?>?` | Extracts the text used for searching (falls back to `ValueSelector?.ToString()`) |
 | `CellTemplate` | `RenderFragment<TItem>?` | Custom Blazor template to render cell content |
+
+### Resizing and reordering
+
+```razor
+<FancyTable TItem="PersonRow"
+            Items="People"
+            Columns="PeopleColumns"
+            EnableColumnResizing="true"
+            EnableColumnReordering="true"
+            InitialColumnLayout="SavedLayout"
+            ColumnLayoutChanged="SaveLayout" />
+
+@code {
+    private IReadOnlyList<FancyColumnLayout>? SavedLayout;
+
+    private void SaveLayout(IReadOnlyList<FancyColumnLayout> layout) =>
+        SavedLayout = layout;
+}
+```
+
+Columns without `Width` or `MaxWidth` initially follow the currently rendered content. A `MaxWidth`-constrained `ValueSelector` cell uses an ellipsis when necessary; click it, or focus it and press `Enter`/`Space`, to toggle the full value. Custom `CellTemplate` content retains full control over its own overflow behavior.
+
+The first declared column of `FancyTreeTable` remains visible and fixed at the left while reordering is enabled. Non-reorderable columns act as boundaries that other columns cannot cross. Hidden columns retain their saved position and width.
 
 ## Setup
 
@@ -534,7 +573,7 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 - [x] NuGet package release
 - [x] Pagination support with optional custom templates
 - [x] Localization support for default UI text
-- [ ] Column resizing and reordering
+- [x] Column resizing and reordering
 - [ ] Export to CSV/Excel
 - [ ] Detail rows / expandable row content
 - [ ] Row click / activation API

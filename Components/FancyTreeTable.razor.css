@@ -45,9 +45,77 @@
     text-align: left;
     font-weight: 600;
     color: #495057;
-    cursor: pointer;
     position: relative;
     transition: background-color 0.2s;
+}
+
+::deep .fancy-column-header {
+    min-width: 0;
+    width: 100%;
+}
+
+::deep .fancy-column-reorder-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #6c757d;
+    cursor: grab;
+    touch-action: none;
+}
+
+::deep .fancy-column-reorder-handle:active,
+::deep th.is-dragging .fancy-column-reorder-handle {
+    cursor: grabbing;
+}
+
+::deep .fancy-column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -0.25rem;
+    bottom: 0;
+    z-index: 2;
+    width: 0.5rem;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+::deep .fancy-column-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 20%;
+    bottom: 20%;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: transparent;
+}
+
+::deep .fancy-column-resize-handle:hover::after,
+::deep .fancy-column-resize-handle:focus-visible::after,
+::deep .fancy-column-resize-handle.is-active::after {
+    background: #0d6efd;
+}
+
+::deep th.drop-before::before,
+::deep th.drop-after::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 3;
+    width: 3px;
+    background: #0d6efd;
+}
+
+::deep th.drop-before::before {
+    left: -2px;
+}
+
+::deep th.drop-after::after {
+    right: -2px;
 }
 
 ::deep th:hover {
@@ -62,6 +130,28 @@
     padding: 0.5rem 0.75rem;
     vertical-align: middle;
     border-top: 1px solid #dee2e6;
+}
+
+::deep .fancy-column-layout-enabled .fancy-cell-value,
+::deep .fancy-cell-constrained .fancy-cell-value {
+    display: block;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+::deep .fancy-cell-constrained .fancy-cell-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+::deep .fancy-cell-value.is-overflowing {
+    cursor: pointer;
+}
+
+::deep .fancy-cell-value.is-expanded {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 ::deep th:first-child,
@@ -81,6 +171,7 @@
 ::deep .tree-node-content {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     min-width: 0;
 }
 

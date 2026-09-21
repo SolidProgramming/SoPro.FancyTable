@@ -11,7 +11,7 @@ else
         {
             FancyColumn<TItem> column = VisibleColumns[index];
 
-            <td class="@GetCellClass(column, index == 0)">
+            <td class="@GetCellClass(column, index == 0)" style="@GetCellStyle(column)">
                 @if (index == 0)
                 {
                     <div class="tree-node-content">
@@ -37,14 +37,25 @@ else
                             @RowLeadingContentTemplate(RowContext)
                         }
 
-                        <span class="tree-node-value">
+                        <span class="tree-node-value @(column.CellTemplate is null ? "fancy-cell-value" : null)"
+                              data-expandable="@(column.CellTemplate is null && IsColumnConstrained(column) ? "true" : "false")">
                             @RenderCellValue(column)
                         </span>
                     </div>
                 }
                 else
                 {
-                    @RenderCellValue(column)
+                    @if (column.CellTemplate is not null)
+                    {
+                        @column.CellTemplate(Node.Item)
+                    }
+                    else
+                    {
+                        <span class="fancy-cell-value"
+                              data-expandable="@(IsColumnConstrained(column) ? "true" : "false")">
+                            @column.ValueSelector?.Invoke(Node.Item)
+                        </span>
+                    }
                 }
             </td>
         }
@@ -57,6 +68,9 @@ else
 
     [Parameter, EditorRequired]
     public required IReadOnlyList<FancyColumn<TItem>> VisibleColumns { get; set; }
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyDictionary<string, double> ColumnWidths { get; set; }
 
     [Parameter, EditorRequired]
     public required EventCallback<TreeNodeState<TItem>> ToggleNode { get; set; }
@@ -102,15 +116,36 @@ else
 
     private IReadOnlyDictionary<string, object?>? GetRowAttributes() => RowAttributesSelector?.Invoke(RowContext);
 
-    private static string? GetCellClass(FancyColumn<TItem> column, bool isTreeColumn)
+    private string? GetCellClass(FancyColumn<TItem> column, bool isTreeColumn)
     {
-        if (!isTreeColumn)
-            return column.CellClass;
+        string? cellClass = column.CellClass;
+        if (IsColumnConstrained(column))
+        {
+            cellClass = string.IsNullOrWhiteSpace(cellClass) ? "fancy-cell-constrained" : $"{cellClass} fancy-cell-constrained";
+        }
 
-        return string.IsNullOrWhiteSpace(column.CellClass)
+        if (!isTreeColumn)
+            return cellClass;
+
+        return string.IsNullOrWhiteSpace(cellClass)
             ? "tree-node-cell"
-            : $"{column.CellClass} tree-node-cell";
+            : $"{cellClass} tree-node-cell";
     }
+
+    private string? GetCellStyle(FancyColumn<TItem> column)
+    {
+        if (ColumnWidths.TryGetValue(column.Key, out double width))
+        {
+            return FormattableString.Invariant($"width:{width:0.##}px;max-width:{width:0.##}px;");
+        }
+
+        return column.MaxWidth is double maxWidth
+            ? FormattableString.Invariant($"max-width:{maxWidth:0.##}px;")
+            : null;
+    }
+
+    private bool IsColumnConstrained(FancyColumn<TItem> column) =>
+        ColumnWidths.ContainsKey(column.Key) || column.MaxWidth.HasValue;
 
     private RenderFragment RenderCellValue(FancyColumn<TItem> column) => builder =>
     {

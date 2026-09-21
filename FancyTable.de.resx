@@ -60,4 +60,10 @@
   <data name="ShowingVisibleRowsFormat" xml:space="preserve">
     <value>Zeige {0}-{1} von {2} sichtbaren Zeilen</value>
   </data>
+  <data name="ResizeColumnFormat" xml:space="preserve">
+    <value>Spalte {0} in der Breite ändern</value>
+  </data>
+  <data name="ReorderColumnFormat" xml:space="preserve">
+    <value>Spalte {0} neu anordnen</value>
+  </data>
 </root>

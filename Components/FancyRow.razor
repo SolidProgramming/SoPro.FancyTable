@@ -11,7 +11,7 @@ else
         {
             FancyColumn<TItem> column = VisibleColumns[index];
 
-            <td class="@column.CellClass">
+            <td class="@GetCellClass(column)" style="@GetCellStyle(column)">
                 @if (index == 0 && RowLeadingContentTemplate is not null)
                 {
                     @RowLeadingContentTemplate(RowContext)
@@ -23,7 +23,10 @@ else
                 }
                 else
                 {
-                    @column.ValueSelector?.Invoke(Item)
+                    <span class="fancy-cell-value"
+                          data-expandable="@(IsColumnConstrained(column) ? "true" : "false")">
+                        @column.ValueSelector?.Invoke(Item)
+                    </span>
                 }
             </td>
         }
@@ -36,6 +39,9 @@ else
 
     [Parameter, EditorRequired]
     public required IReadOnlyList<FancyColumn<TItem>> VisibleColumns { get; set; }
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyDictionary<string, double> ColumnWidths { get; set; }
 
     [Parameter]
     public Func<TItem, string?>? RowClassSelector { get; set; }
@@ -71,4 +77,24 @@ else
     private string? GetRowClass() => RowClassSelector?.Invoke(Item);
 
     private IReadOnlyDictionary<string, object?>? GetRowAttributes() => RowAttributesSelector?.Invoke(RowContext);
+
+    private string? GetCellClass(FancyColumn<TItem> column) =>
+        IsColumnConstrained(column)
+            ? string.IsNullOrWhiteSpace(column.CellClass) ? "fancy-cell-constrained" : $"{column.CellClass} fancy-cell-constrained"
+            : column.CellClass;
+
+    private string? GetCellStyle(FancyColumn<TItem> column)
+    {
+        if (ColumnWidths.TryGetValue(column.Key, out double width))
+        {
+            return FormattableString.Invariant($"width:{width:0.##}px;max-width:{width:0.##}px;");
+        }
+
+        return column.MaxWidth is double maxWidth
+            ? FormattableString.Invariant($"max-width:{maxWidth:0.##}px;")
+            : null;
+    }
+
+    private bool IsColumnConstrained(FancyColumn<TItem> column) =>
+        ColumnWidths.ContainsKey(column.Key) || column.MaxWidth.HasValue;
 }

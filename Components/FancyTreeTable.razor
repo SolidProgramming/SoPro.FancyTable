@@ -1,6 +1,8 @@
 @typeparam TItem where TItem : notnull
-@implements IDisposable
+@implements IAsyncDisposable
 @using System.Globalization
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
 @{
     PagedNodesResult pagedNodes = GetPagedNodes();
@@ -64,13 +66,34 @@
 }
 
 <div class="tree-table-container">
-    <table class="tree-table">
+    <table class="@GetTableClass()" @ref="tableElement">
+        <colgroup>
+            @foreach (FancyColumn<TItem> column in VisibleColumns)
+            {
+                <col data-column-key="@column.Key" style="@columnLayout.GetColumnStyle(column.Key)" />
+            }
+        </colgroup>
         <thead>
             <tr>
                 @foreach (FancyColumn<TItem> column in VisibleColumns)
                 {
-                    <th class="@column.HeaderClass">
-                        <div class="d-inline-flex align-items-center gap-1">
+                    <th class="@column.HeaderClass"
+                        style="@columnLayout.GetColumnStyle(column.Key)"
+                        data-column-key="@column.Key"
+                        data-reorderable="@(CanReorder(column) ? "true" : "false")"
+                        data-min-width="@GetDataWidth(column.MinWidth)"
+                        data-max-width="@GetDataWidth(column.MaxWidth)">
+                        <div class="fancy-column-header d-inline-flex align-items-center gap-1">
+                            @if (CanReorder(column))
+                            {
+                                <button type="button"
+                                        class="fancy-column-reorder-handle"
+                                        data-column-reorder-handle
+                                        aria-label="@FormatColumnLabel(ResolvedTexts.ReorderColumnFormat, column.Title)">
+                                    <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                </button>
+                            }
+
                             <span class="col-title">@column.Title</span>
 
                             @if (column.Sortable)
@@ -80,13 +103,23 @@
                                 </button>
                             }
 
-                            @if (column.Hideable)
+                            @if (column.Hideable && !IsPinnedTreeColumn(column.Key))
                             {
                                 <button class="btn btn-link p-0 border-0" @onclick="() => HideColumn(column.Key)">
                                     <i class="bi bi-eye-slash"></i>
                                 </button>
                             }
                         </div>
+
+                        @if (EnableColumnResizing && column.Resizable)
+                        {
+                            <span class="fancy-column-resize-handle"
+                                  data-column-resize-handle
+                                  role="separator"
+                                  tabindex="0"
+                                  aria-orientation="vertical"
+                                  aria-label="@FormatColumnLabel(ResolvedTexts.ResizeColumnFormat, column.Title)"></span>
+                        }
                     </th>
                 }
             </tr>
@@ -97,6 +130,7 @@
                 <FancyTreeRow TItem="TItem"
                               Node="node"
                               VisibleColumns="VisibleColumnsList"
+                              ColumnWidths="columnLayout.Widths"
                               ToggleNode="ToggleNodeAsync"
                               RowClassSelector="RowClassSelector"
                               RowAttributesSelector="RowAttributesSelector"
@@ -272,9 +306,25 @@
     [Parameter]
     public string? PaginationSummaryClass { get; set; }
 
+    [Parameter]
+    public bool EnableColumnResizing { get; set; }
+
+    [Parameter]
+    public bool EnableColumnReordering { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<FancyColumnLayout>? InitialColumnLayout { get; set; }
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<FancyColumnLayout>> ColumnLayoutChanged { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
+    private readonly FancyColumnLayoutController<TItem> columnLayout = new();
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
     private readonly List<TreeNodeState<TItem>> RootNodes = [];
+    private ElementReference tableElement;
+    private IJSObjectReference? columnModule;
+    private DotNetObjectReference<FancyTreeTable<TItem>>? dotNetReference;
     private string? SortColumnKey;
     private bool SortAscending = true;
     private string SearchText = string.Empty;
@@ -295,11 +345,15 @@
     private string ResolvedExpandLabel => ResolvedTexts.ExpandLabel;
     private string ResolvedCollapseLabel => ResolvedTexts.CollapseLabel;
 
+    private string? PinnedTreeColumnKey => EnableColumnReordering ? Columns.FirstOrDefault()?.Key : null;
+
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
-        Columns.Where(c => !HiddenColumns.Contains(c.Key));
+        columnLayout.GetOrderedColumns().Where(c => !HiddenColumns.Contains(c.Key));
 
     private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
     private bool IsPaginationActive => PaginationEnabled && PaginationPageSize > 0;
+    private bool IsColumnLayoutEnabled =>
+        EnableColumnResizing || EnableColumnReordering || Columns.Any(column => column.Width.HasValue || column.MaxWidth.HasValue);
     private bool ShouldRenderPageSizeSelector => PaginationEnabled && ShowPageSizeSelector;
     private int PaginationPageSize => paginationPageSize > 0 ? paginationPageSize : 0;
     private FancyTreeTableContext<TItem> TreeContext => BuildTreeContext();
@@ -338,8 +392,33 @@
 
     protected override void OnParametersSet()
     {
+        columnLayout.Synchronize(Columns, InitialColumnLayout, PinnedTreeColumnKey);
+        if (PinnedTreeColumnKey is string pinnedKey)
+        {
+            HiddenColumns.Remove(pinnedKey);
+        }
+
         SyncPaginationStateFromParameters();
         RebuildTree();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!EnableColumnResizing
+            && !EnableColumnReordering
+            && columnLayout.Widths.Count == 0
+            && !columnLayout.GetOrderedColumns().Any(column => column.MaxWidth.HasValue))
+        {
+            return;
+        }
+
+        columnModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/SoPro.FancyTable/fancy-table-columns.js");
+        dotNetReference ??= DotNetObjectReference.Create(this);
+        await columnModule.InvokeVoidAsync("initialize", tableElement, dotNetReference, new
+        {
+            resizing = EnableColumnResizing,
+            reordering = EnableColumnReordering
+        });
     }
 
     private void RebuildTree()
@@ -510,6 +589,37 @@
     private void HideColumn(string key) => HiddenColumns.Add(key);
 
     private void ShowColumn(string key) => HiddenColumns.Remove(key);
+
+    private bool IsPinnedTreeColumn(string key) => PinnedTreeColumnKey == key;
+
+    private bool CanReorder(FancyColumn<TItem> column) =>
+        EnableColumnReordering && column.Reorderable && !IsPinnedTreeColumn(column.Key);
+
+    private static string FormatColumnLabel(string format, string title) =>
+        string.Format(CultureInfo.CurrentCulture, format, title);
+
+    private static string? GetDataWidth(double? width) =>
+        width is double value ? value.ToString(CultureInfo.InvariantCulture) : null;
+
+    [JSInvokable]
+    public async Task OnColumnResizeCompleted(FancyColumnLayout[] measurements)
+    {
+        columnLayout.ApplyMeasuredWidths(measurements);
+        await ColumnLayoutChanged.InvokeAsync(columnLayout.GetLayout());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnColumnReorderCompleted(string sourceKey, string targetKey, bool insertAfter)
+    {
+        if (!EnableColumnReordering || !columnLayout.TryReorder(sourceKey, targetKey, insertAfter, PinnedTreeColumnKey))
+        {
+            return;
+        }
+
+        await ColumnLayoutChanged.InvokeAsync(columnLayout.GetLayout());
+        await InvokeAsync(StateHasChanged);
+    }
 
     private bool GetOrInitializeExpandedState(TItem item)
     {
@@ -827,6 +937,8 @@
 
     private string GetTopBarClass() => CombineClasses("fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2", TopBarClass);
 
+    private string GetTableClass() => IsColumnLayoutEnabled ? "tree-table fancy-column-layout-enabled" : "tree-table";
+
     private string GetToolbarContainerClass() => CombineClasses("d-flex ms-auto", ToolbarContainerClass);
 
     private string GetPageSizeContainerClass() => CombineClasses("fancy-page-size", PageSizeContainerClass);
@@ -856,5 +968,21 @@
         public int CollapsedExpandableNodeCount { get; set; }
     }
 
-    public void Dispose() => debounceTimer?.Dispose();
+    public async ValueTask DisposeAsync()
+    {
+        debounceTimer?.Dispose();
+        if (columnModule is not null)
+        {
+            try
+            {
+                await columnModule.InvokeVoidAsync("dispose", tableElement);
+                await columnModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        dotNetReference?.Dispose();
+    }
 }

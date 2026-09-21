@@ -18,4 +18,6 @@ public sealed record FancyTableTexts
     public string CollapseLabel { get; init; } = "Collapse";
     public string NoMatchingRootItemsFormat { get; init; } = "No matching rows ({0} total root items)";
     public string ShowingVisibleRowsFormat { get; init; } = "Showing {0}-{1} of {2} visible rows";
+    public string ResizeColumnFormat { get; init; } = "Resize column {0}";
+    public string ReorderColumnFormat { get; init; } = "Reorder column {0}";
 }

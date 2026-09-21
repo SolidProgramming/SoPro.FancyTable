@@ -60,4 +60,10 @@
   <data name="ShowingVisibleRowsFormat" xml:space="preserve">
     <value>Showing {0}-{1} of {2} visible rows</value>
   </data>
+  <data name="ResizeColumnFormat" xml:space="preserve">
+    <value>Resize column {0}</value>
+  </data>
+  <data name="ReorderColumnFormat" xml:space="preserve">
+    <value>Reorder column {0}</value>
+  </data>
 </root>
