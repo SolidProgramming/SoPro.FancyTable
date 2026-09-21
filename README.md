@@ -5,7 +5,7 @@
 
 https://www.nuget.org/packages/SoPro.FancyTable
 
-![Playground.png](https://github.com/SolidProgramming/SoPro.FancyTable/blob/ba84b575fafa1c86a7c4e7f074de32cb52be5c18/Playground.png)
+![Playground.png](Playground.png)
 
 ## Overview
 
