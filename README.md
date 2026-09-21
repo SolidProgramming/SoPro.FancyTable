@@ -70,6 +70,61 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Header and cell styling via `HeaderClass` and `CellClass`
 - Wrapper layout classes for toolbar, tree actions, page size, and pagination containers
 
+## Data preparation and performance
+
+Both tables reuse prepared data during internal display actions such as paging,
+changing page size, hiding columns, resizing, and reordering columns. The flat
+table caches its filtered/sorted items. The tree table shares its visible-node
+list between rows, pagination, and tree actions, and caches expansion statistics.
+Search, sort, and expansion changes invalidate the affected results. All rendered
+rows share one visible-column list per render.
+
+Every parameter delivery (`OnParametersSet`) refreshes data preparation. This
+preserves updates to existing lists, item properties, child collections, and
+state captured by selector delegates. A parent rerender that delivers parameters
+can therefore still cause a full query or tree rebuild. No version parameter or
+explicit refresh call is required. Selectors should compute values without
+depending on how often they are called.
+
+These optimizations do not virtualize rows or fetch data from a server. Use
+pagination to limit the number of rendered rows.
+
+### Verification and reproducible comparison
+
+Run the regression suite:
+
+```shell
+dotnet test tests/SoPro.FancyTable.Tests/SoPro.FancyTable.Tests.csproj --configuration Release
+```
+
+Print the focused allocation comparison:
+
+```shell
+dotnet test tests/SoPro.FancyTable.Tests/SoPro.FancyTable.Tests.csproj --configuration Release --filter Category=Performance --logger "console;verbosity=detailed"
+```
+
+The comparison warms each operation five times and measures 100 synchronous
+calls with `GC.GetAllocatedBytesForCurrentThread`. It exercises the actual
+preparation methods without rendering or network traffic. The flat comparison
+forces query-cache invalidation before each baseline call; pagination uses 25
+rows. The tree comparison uses 11,110 nodes (ten roots, branching factor ten,
+four levels) and includes the original per-node temporary-list search as a
+reference. Every node matches. Tree measurements cover visible-node selection,
+excluding initial tree construction, statistics, pagination, and rendering.
+
+Example Release run on Windows x64, .NET 10.0.12 (SDK 10.0.401):
+
+| Operation, 100 calls | Allocated bytes, approximately | Search calls | Sort-selector calls |
+|---|---:|---:|---:|
+| Flat, 10,000 rows, uncached query | 60,132,800 | 1,000,000 | 1,000,000 |
+| Flat, same query cached | 72,000 | 0 | 0 |
+| Tree, original search | 149,476,416 | 1,111,000 | 0 |
+| Tree, new search with cache invalidated each time | 61,799,624 | 1,111,000 | 0 |
+| Tree, same search cached | 0 | 0 | 0 |
+
+Allocation totals vary by runtime and JIT behavior and aren't CI thresholds.
+Tests assert selector counts and result correctness, without timing assertions.
+
 ## Parameters
 
 | Parameter | Type | Description |

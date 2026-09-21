@@ -26,3 +26,6 @@ jobs:
 
     - name: Build project
       run: dotnet build SoPro.FancyTable.csproj --configuration Release --no-restore
+
+    - name: Test
+      run: dotnet test tests/SoPro.FancyTable.Tests/SoPro.FancyTable.Tests.csproj --configuration Release

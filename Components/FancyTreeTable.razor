@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 
 @{
+    IReadOnlyList<FancyColumn<TItem>> visibleColumns = VisibleColumns.ToList();
     PagedNodesResult pagedNodes = GetPagedNodes();
 }
 
@@ -68,14 +69,14 @@
 <div class="tree-table-container">
     <table class="@GetTableClass()" @ref="tableElement">
         <colgroup>
-            @foreach (FancyColumn<TItem> column in VisibleColumns)
+            @foreach (FancyColumn<TItem> column in visibleColumns)
             {
                 <col data-column-key="@column.Key" style="@columnLayout.GetColumnStyle(column.Key)" />
             }
         </colgroup>
         <thead>
             <tr>
-                @foreach (FancyColumn<TItem> column in VisibleColumns)
+                @foreach (FancyColumn<TItem> column in visibleColumns)
                 {
                     <th class="@column.HeaderClass"
                         style="@columnLayout.GetColumnStyle(column.Key)"
@@ -129,7 +130,7 @@
             {
                 <FancyTreeRow TItem="TItem"
                               Node="node"
-                              VisibleColumns="VisibleColumnsList"
+                              VisibleColumns="visibleColumns"
                               ColumnWidths="columnLayout.Widths"
                               ToggleNode="ToggleNodeAsync"
                               RowClassSelector="RowClassSelector"
@@ -350,7 +351,6 @@
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         columnLayout.GetOrderedColumns().Where(c => !HiddenColumns.Contains(c.Key));
 
-    private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
     private bool IsPaginationActive => PaginationEnabled && PaginationPageSize > 0;
     private bool IsColumnLayoutEnabled =>
         EnableColumnResizing || EnableColumnReordering || Columns.Any(column => column.Width.HasValue || column.MaxWidth.HasValue);
@@ -421,8 +421,19 @@
         });
     }
 
+    private List<TreeNodeState<TItem>>? preparedVisibleNodes;
+    private string? preparedFilter;
+    private TreeNodeStatistics? preparedStatistics;
+
+    private void InvalidateNodeCaches()
+    {
+        preparedVisibleNodes = null;
+        preparedStatistics = null;
+    }
+
     private void RebuildTree()
     {
+        InvalidateNodeCaches();
         RootNodes.Clear();
 
         IEnumerable<TItem> sortedRootItems = ApplySiblingSort(FilterNullItems(Items));
@@ -499,6 +510,11 @@
     private List<TreeNodeState<TItem>> BuildVisibleNodes()
     {
         string filter = CurrentFilter;
+        if (preparedVisibleNodes is not null && preparedFilter == filter)
+        {
+            return preparedVisibleNodes;
+        }
+
         List<TreeNodeState<TItem>> visibleNodes = [];
 
         if (string.IsNullOrWhiteSpace(filter))
@@ -512,10 +528,12 @@
         {
             foreach (TreeNodeState<TItem> root in RootNodes)
             {
-                CollectSearchNodes(root, filter, visibleNodes, out _);
+                CollectSearchNodes(root, filter, visibleNodes);
             }
         }
 
+        preparedVisibleNodes = visibleNodes;
+        preparedFilter = filter;
         return visibleNodes;
     }
 
@@ -534,31 +552,25 @@
         }
     }
 
-    private bool CollectSearchNodes(
+    private void CollectSearchNodes(
         TreeNodeState<TItem> node,
         string filter,
-        List<TreeNodeState<TItem>> visibleNodes,
-        out bool includeNode)
+        List<TreeNodeState<TItem>> visibleNodes)
     {
         bool matchesSelf = MatchesSearch(node.Item, filter);
         int insertIndex = visibleNodes.Count;
-        List<TreeNodeState<TItem>> childMatches = [];
+        visibleNodes.Add(node);
 
         foreach (TreeNodeState<TItem> child in node.Children)
         {
-            CollectSearchNodes(child, filter, childMatches, out bool childIncluded);
-            _ = childIncluded;
+            CollectSearchNodes(child, filter, visibleNodes);
         }
 
-        includeNode = matchesSelf || childMatches.Count > 0;
-        if (!includeNode)
+        // An unmatched node only survives when a descendant was retained.
+        if (!matchesSelf && visibleNodes.Count == insertIndex + 1)
         {
-            return false;
+            visibleNodes.RemoveAt(insertIndex);
         }
-
-        visibleNodes.Insert(insertIndex, node);
-        visibleNodes.AddRange(childMatches);
-        return true;
     }
 
     private void SortBy(string columnKey)
@@ -635,6 +647,7 @@
 
     private Task ToggleNodeAsync(TreeNodeState<TItem> node)
     {
+        InvalidateNodeCaches();
         node.IsExpanded = !node.IsExpanded;
         ExpandedStates[node.Item] = node.IsExpanded;
 
@@ -743,6 +756,7 @@
 
     private void SetExpandedStateForAllNodes(bool expanded)
     {
+        InvalidateNodeCaches();
         foreach (TreeNodeState<TItem> rootNode in RootNodes)
         {
             SetExpandedStateRecursive(rootNode, expanded);
@@ -803,6 +817,11 @@
 
     private TreeNodeStatistics GetTreeNodeStatistics()
     {
+        if (preparedStatistics is not null)
+        {
+            return preparedStatistics;
+        }
+
         TreeNodeStatistics stats = new();
 
         foreach (TreeNodeState<TItem> rootNode in RootNodes)
@@ -810,6 +829,7 @@
             CollectTreeNodeStatistics(rootNode, stats);
         }
 
+        preparedStatistics = stats;
         return stats;
     }
 

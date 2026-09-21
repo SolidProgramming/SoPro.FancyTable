@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 
 @{
+    IReadOnlyList<FancyColumn<TItem>> visibleColumns = VisibleColumns.ToList();
     PagedItemsResult pagedItems = GetPagedItems();
 }
 
@@ -61,14 +62,14 @@
 <div class="tree-table-container">
     <table class="@GetTableClass()" @ref="tableElement">
         <colgroup>
-            @foreach (FancyColumn<TItem> column in VisibleColumns)
+            @foreach (FancyColumn<TItem> column in visibleColumns)
             {
                 <col data-column-key="@column.Key" style="@columnLayout.GetColumnStyle(column.Key)" />
             }
         </colgroup>
         <thead>
             <tr>
-                @foreach (FancyColumn<TItem> column in VisibleColumns)
+                @foreach (FancyColumn<TItem> column in visibleColumns)
                 {
                     <th class="@column.HeaderClass"
                         style="@columnLayout.GetColumnStyle(column.Key)"
@@ -122,7 +123,7 @@
             {
                 <FancyRow TItem="TItem"
                           Item="item"
-                          VisibleColumns="VisibleColumnsList"
+                          VisibleColumns="visibleColumns"
                           ColumnWidths="columnLayout.Widths"
                           RowClassSelector="RowClassSelector"
                           RowAttributesSelector="RowAttributesSelector"
@@ -319,8 +320,6 @@
     private IEnumerable<FancyColumn<TItem>> VisibleColumns =>
         columnLayout.GetOrderedColumns().Where(c => !HiddenColumns.Contains(c.Key));
 
-    private IReadOnlyList<FancyColumn<TItem>> VisibleColumnsList => VisibleColumns.ToList();
-
     private bool IsPaginationActive => PaginationEnabled && PaginationPageSize > 0;
     private bool IsColumnLayoutEnabled =>
         EnableColumnResizing || EnableColumnReordering || Columns.Any(column => column.Width.HasValue || column.MaxWidth.HasValue);
@@ -356,8 +355,15 @@
         }
     }
 
+    private IReadOnlyList<TItem>? preparedItems;
+    private string? preparedFilter;
+    private string? preparedSortColumnKey;
+    private bool preparedSortAscending;
+
     protected override void OnParametersSet()
     {
+        // Parameters can contain mutable lists, items, and delegate closures.
+        preparedItems = null;
         columnLayout.Synchronize(Columns, InitialColumnLayout, pinnedColumnKey: null);
         SyncPaginationStateFromParameters();
     }
@@ -384,9 +390,19 @@
     private PagedItemsResult GetPagedItems()
     {
         string filter = string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
-        IReadOnlyList<TItem> filteredAndSortedItems = TableQueryHelpers
-            .ApplySort(TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate), SortColumnKey, SortAscending, Columns)
-            .ToList();
+        if (preparedItems is null || preparedFilter != filter
+            || preparedSortColumnKey != SortColumnKey || preparedSortAscending != SortAscending)
+        {
+            IReadOnlyList<TItem> result = TableQueryHelpers
+                .ApplySort(TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate), SortColumnKey, SortAscending, Columns)
+                .ToList();
+            preparedItems = result;
+            preparedFilter = filter;
+            preparedSortColumnKey = SortColumnKey;
+            preparedSortAscending = SortAscending;
+        }
+
+        IReadOnlyList<TItem> filteredAndSortedItems = preparedItems;
 
         FancyPaginationContext<TItem> paginationContext = BuildPaginationContext(
             totalItemCount: Items.Count,
