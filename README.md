@@ -125,6 +125,21 @@ Example Release run on Windows x64, .NET 10.0.12 (SDK 10.0.401):
 Allocation totals vary by runtime and JIT behavior and aren't CI thresholds.
 Tests assert selector counts and result correctness, without timing assertions.
 
+### BenchmarkDotNet
+
+The standalone [benchmark project](benchmarks/SoPro.FancyTable.Benchmarks/README.md)
+measures preparation time, allocated bytes, and garbage collections with
+BenchmarkDotNet. Run a short comparison in Release mode:
+
+```shell
+dotnet run --project benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj -c Release -- --filter "*" --job Short
+```
+
+It covers flat queries with 1,000–100,000 rows and tree searches with 1,110 or
+11,110 nodes, including sparse matches. These measurements isolate data
+preparation; they do not measure browser rendering or scrolling. The existing
+tests remain the correctness and selector-count checks used by CI.
+
 ## Parameters
 
 | Parameter | Type | Description |

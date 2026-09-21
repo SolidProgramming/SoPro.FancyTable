@@ -362,3 +362,6 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /.dotnet/.dotnet
+
+# BenchmarkDotNet generated reports and logs
+BenchmarkDotNet.Artifacts/

@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Benchmarks: Dry (all)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run", "--project",
+        "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
+        "-c", "Release", "--", "--filter", "*", "--job", "Dry"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "detail": "Quick functional check of all benchmarks; not a meaningful timing comparison."
+    },
+    {
+      "label": "Benchmarks: Short (all)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run", "--project",
+        "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
+        "-c", "Release", "--", "--filter", "*", "--job", "Short"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "detail": "Short measurement run of all flat and tree benchmarks."
+    },
+    {
+      "label": "Benchmarks: Full (flat table)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run", "--project",
+        "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
+        "-c", "Release", "--", "--filter", "*FlatPreparationBenchmarks*"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "detail": "Full default measurement run of flat-table benchmarks only."
+    },
+    {
+      "label": "Benchmarks: Full (tree table)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run", "--project",
+        "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
+        "-c", "Release", "--", "--filter", "*TreePreparationBenchmarks*"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "detail": "Full default measurement run of tree-table benchmarks only."
+    }
+  ]
+}

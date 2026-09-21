@@ -28,6 +28,10 @@
     <Content Remove="tests/**" />
     <None Remove="tests/**" />
     <RazorComponent Remove="tests/**/*.razor" />
+    <Compile Remove="benchmarks/**/*.cs" />
+    <Content Remove="benchmarks/**" />
+    <None Remove="benchmarks/**" />
+    <RazorComponent Remove="benchmarks/**/*.razor" />
   </ItemGroup>
 
   <ItemGroup>
