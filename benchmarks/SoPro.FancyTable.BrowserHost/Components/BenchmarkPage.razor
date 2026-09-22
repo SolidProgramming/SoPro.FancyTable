@@ -1,0 +1,64 @@
+@page "/"
+
+<main>
+    <h1>FancyTable browser benchmark</h1>
+    <div id="fixture" data-ping="@ping" data-mounted="@mounted.ToString().ToLowerInvariant()">
+        <button id="ping" @onclick="() => ping++">Check connection</button>
+        <button id="reset" @onclick="Reset">Reset</button>
+        <button id="mount" @onclick="() => mounted = true" disabled="@mounted">Show table</button>
+    </div>
+    <section id="table-region" aria-label="Benchmark table">
+        @if (mounted)
+        {
+            @if (Kind == "flat")
+            {
+                <FancyTable TItem="BenchmarkRow" Items="items" Columns="columns"
+                            PaginationEnabled="Paged" PageSize="50"
+                            RowAttributesSelector="row => row.Item.Attributes" />
+            }
+            else
+            {
+                <FancyTreeTable TItem="BenchmarkRow" Items="items" Columns="columns"
+                                ChildItemsSelector="row => row.Children"
+                                RowAttributesSelector="row => row.Item.Attributes">
+                    <TreeActionsTemplate Context="context"><TreeControls Context="context" /></TreeActionsTemplate>
+                </FancyTreeTable>
+            }
+        }
+    </section>
+</main>
+
+@code {
+    [SupplyParameterFromQuery] public string Kind { get; set; } = "flat";
+    [SupplyParameterFromQuery] public int Size { get; set; } = 1000;
+    [SupplyParameterFromQuery] public bool Paged { get; set; }
+    [SupplyParameterFromQuery] public bool Templates { get; set; }
+    private List<BenchmarkRow> items = [];
+    private List<FancyColumn<BenchmarkRow>> columns = [];
+    private bool mounted;
+    private int ping;
+
+    protected override void OnInitialized()
+    {
+        if (Kind is not ("flat" or "tree") || (Kind == "flat" && Size is not (1000 or 10000))
+            || (Kind == "tree" && Size is not (3 or 4)))
+            throw new ArgumentException("Unsupported benchmark fixture.");
+        items = Kind == "flat" ? BenchmarkRow.Flat(Size) : BenchmarkRow.Tree(Size);
+        columns =
+        [
+            new() { Key = "id", Title = "Id", Width = 210, ValueSelector = r => r.Id },
+            new() { Key = "name", Title = "Name", Width = 200, Sortable = true,
+                ValueSelector = r => r.Name, SortValueSelector = r => r.Name },
+            new() { Key = "category", Title = "Category", Width = 180, ValueSelector = r => r.Category },
+            new() { Key = "quantity", Title = "Quantity", Width = 150, ValueSelector = r => r.Quantity },
+            new() { Key = "status", Title = "Status", Width = 180, ValueSelector = r => r.Status,
+                CellTemplate = Templates ? StatusCell : null },
+            new() { Key = "action", Title = "Action", Width = 180, ValueSelector = _ => "Details",
+                CellTemplate = Templates ? ActionCell : null }
+        ];
+    }
+
+    private void Reset() => mounted = false;
+    private RenderFragment<BenchmarkRow> StatusCell => row => @<span class="badge bg-success">@row.Status</span>;
+    private RenderFragment<BenchmarkRow> ActionCell => row => @<button type="button" class="btn btn-sm btn-outline-primary" aria-label="@($"Details for {row.Id}")"><i class="bi bi-info-circle" aria-hidden="true"></i> Details</button>;
+}

@@ -29,3 +29,36 @@ jobs:
 
     - name: Test
       run: dotnet test tests/SoPro.FancyTable.Tests/SoPro.FancyTable.Tests.csproj --configuration Release
+
+  browser-benchmark-smoke:
+    name: Browser benchmark smoke
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restore browser benchmarks
+      run: dotnet restore benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj
+
+    - name: Build browser benchmarks
+      run: dotnet build benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj --configuration Release --no-restore
+
+    - name: Install Chromium and Linux dependencies
+      run: dotnet run --project benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj --configuration Release --no-build -- --install --with-deps
+
+    - name: Run complete browser scenario smoke test
+      run: dotnet run --project benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj --configuration Release --no-build -- --profile Dry
+
+    - name: Upload browser benchmark report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: browser-benchmark-smoke
+        path: BrowserBenchmark.Artifacts/
+        if-no-files-found: error

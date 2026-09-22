@@ -3,4 +3,6 @@
   <Project Path="SoPro.FancyTable.csproj" />
   <Project Path="tests/SoPro.FancyTable.Tests/SoPro.FancyTable.Tests.csproj" />
   <Project Path="benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj" />
+  <Project Path="benchmarks/SoPro.FancyTable.BrowserHost/SoPro.FancyTable.BrowserHost.csproj" />
+  <Project Path="benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj" />
 </Solution>

@@ -6,13 +6,25 @@
       "type": "process",
       "command": "dotnet",
       "args": [
-        "run", "--project",
+        "run",
+        "--project",
         "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
-        "-c", "Release", "--", "--filter", "*", "--job", "Dry"
+        "-c",
+        "Release",
+        "--",
+        "--filter",
+        "*",
+        "--job",
+        "Dry"
       ],
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": "$msCompile",
-      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "detail": "Quick functional check of all benchmarks; not a meaningful timing comparison."
     },
     {
@@ -20,13 +32,25 @@
       "type": "process",
       "command": "dotnet",
       "args": [
-        "run", "--project",
+        "run",
+        "--project",
         "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
-        "-c", "Release", "--", "--filter", "*", "--job", "Short"
+        "-c",
+        "Release",
+        "--",
+        "--filter",
+        "*",
+        "--job",
+        "Short"
       ],
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": "$msCompile",
-      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "detail": "Short measurement run of all flat and tree benchmarks."
     },
     {
@@ -34,13 +58,23 @@
       "type": "process",
       "command": "dotnet",
       "args": [
-        "run", "--project",
+        "run",
+        "--project",
         "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
-        "-c", "Release", "--", "--filter", "*FlatPreparationBenchmarks*"
+        "-c",
+        "Release",
+        "--",
+        "--filter",
+        "*FlatPreparationBenchmarks*"
       ],
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": "$msCompile",
-      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "detail": "Full default measurement run of flat-table benchmarks only."
     },
     {
@@ -48,14 +82,168 @@
       "type": "process",
       "command": "dotnet",
       "args": [
-        "run", "--project",
+        "run",
+        "--project",
         "benchmarks/SoPro.FancyTable.Benchmarks/SoPro.FancyTable.Benchmarks.csproj",
-        "-c", "Release", "--", "--filter", "*TreePreparationBenchmarks*"
+        "-c",
+        "Release",
+        "--",
+        "--filter",
+        "*TreePreparationBenchmarks*"
       ],
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": "$msCompile",
-      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "detail": "Full default measurement run of tree-table benchmarks only."
+    },
+    {
+      "label": "Browser Benchmarks: Install Chromium",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Install the Chromium build required by the Playwright browser benchmarks."
+    },
+    {
+      "label": "Browser Benchmarks: Dry",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--profile",
+        "Dry"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Functional smoke run of all 48 browser benchmark actions."
+    },
+    {
+      "label": "Browser Benchmarks: Dry (Headed)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--profile",
+        "Dry"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Functional smoke run of all 48 browser benchmark actions."
+    }
+    {
+      "label": "Browser Benchmarks: Short",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--profile",
+        "Short"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Two warmups and five measured runs for every browser action."
+    },
+    {
+      "label": "Browser Benchmarks: Short (Headed)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--profile",
+        "Short",
+        "--headed"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Two warmups and five measured runs for every browser action."
+    },
+    {
+      "label": "Browser Benchmarks: Full",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj",
+        "-c",
+        "Release",
+        "--",
+        "--profile",
+        "Full"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Five warmups and thirty measured runs for every browser action."
     }
   ]
 }

@@ -365,3 +365,4 @@ FodyWeavers.xsd
 
 # BenchmarkDotNet generated reports and logs
 BenchmarkDotNet.Artifacts/
+BrowserBenchmark.Artifacts/

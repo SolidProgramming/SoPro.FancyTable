@@ -1,0 +1,8 @@
+<button id="expand-all" class="btn btn-sm btn-secondary" @onclick="Context.ExpandAll">Expand all</button>
+<button id="collapse-all" class="btn btn-sm btn-secondary" @onclick="Context.CollapseAll">Collapse all</button>
+
+@code {
+    // Own the events here so a toolbar action doesn't rerender the fixture parent
+    // and deliver parameters to/rebuild the table being measured.
+    [Parameter, EditorRequired] public required FancyTreeTableContext<BenchmarkRow> Context { get; set; }
+}

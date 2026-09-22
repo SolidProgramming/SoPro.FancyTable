@@ -140,6 +140,20 @@ It covers flat queries with 1,000–100,000 rows and tree searches with 1,110 or
 preparation; they do not measure browser rendering or scrolling. The existing
 tests remain the correctness and selector-count checks used by CI.
 
+### Playwright browser benchmarks
+
+The [browser benchmark project](benchmarks/SoPro.FancyTable.BrowserBenchmarks/README.md)
+measures mount, paging, sorting, search, and tree expansion in Chromium against a
+local Blazor Interactive Server host. A short local measurement run is:
+
+```shell
+dotnet run --project benchmarks/SoPro.FancyTable.BrowserBenchmarks/SoPro.FancyTable.BrowserBenchmarks.csproj -c Release -- --profile Short
+```
+
+It records browser-event-to-DOM and browser-event-to-frame-opportunity durations
+and emits JSON and standalone HTML under `BrowserBenchmark.Artifacts/`. CI runs a
+functional `Dry` matrix without timing thresholds.
+
 ## Parameters
 
 | Parameter | Type | Description |
