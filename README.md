@@ -1,6 +1,8 @@
 [![.NET Build](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/dotnet-build.yml) <br/>
 [![CodeQL Advanced](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml/badge.svg)](https://github.com/SolidProgramming/SoPro.FancyTable/actions/workflows/codeql.yml)
 
+## [Interactive Playground](https://playground.solidprogramming.dev/)
+
 # SoPro.FancyTable
 
 https://www.nuget.org/packages/SoPro.FancyTable
