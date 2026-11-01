@@ -16,6 +16,7 @@ export async function show(anchor, popup, dotNet) {
     popup.addEventListener("toggle", event => {
         if (event.newState !== "closed") return;
         dispose(popup);
+        popup.removeAttribute("data-positioned");
         const active = document.activeElement;
         if (!active || active === document.body || popup.contains(active)) {
             anchor.focus({ preventScroll: true });
@@ -53,6 +54,7 @@ export async function show(anchor, popup, dotNet) {
     popup.style.margin = "0";
     popup.style.top = `${top}px`;
     popup.style.left = `${left}px`;
+    popup.setAttribute("data-positioned", "");
 
     (popup.querySelector("input") ?? popup.querySelector("select"))?.focus();
 }

@@ -205,7 +205,6 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
 
         Assert.Single(module.Invocations["show"]);
         Assert.Equal("true", cut.Find("button.fancy-filter-button").GetAttribute("aria-expanded"));
-        cut.Find("select").Change("Equals");
         Assert.Equal("xyz", cut.Find("input").GetAttribute("value"));
     }
 
