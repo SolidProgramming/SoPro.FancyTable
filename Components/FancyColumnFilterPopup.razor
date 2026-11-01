@@ -1,0 +1,179 @@
+@implements IAsyncDisposable
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<button type="button"
+        class="btn btn-link p-0 border-0 fancy-filter-button"
+        aria-label="@FormatColumnLabel(Texts.FilterColumnFormat, ColumnTitle)"
+        aria-haspopup="dialog"
+        aria-expanded="@(isOpen ? "true" : "false")"
+        @ref="anchorElement"
+        @onclick="OpenAsync">
+    <i class="bi @(ActiveFilter is null ? "bi-funnel" : "bi-funnel-fill")" aria-hidden="true"></i>
+</button>
+
+<div popover="auto" id="@popupId" class="fancy-filter-popup" @ref="popupElement">
+    <div class="d-flex flex-column gap-2 p-2">
+        <select class="form-select form-select-sm" @bind="draftOperator">
+            @foreach (FancyColumnFilterOperator op in Operators)
+            {
+                <option value="@op.ToString()">@GetOperatorLabel(op)</option>
+            }
+        </select>
+
+        @if (draftOperator.RequiresValue())
+        {
+            <input type="text"
+                   class="form-control form-control-sm"
+                   placeholder="@Texts.FilterValuePlaceholder"
+                   value="@draftValue"
+                   @oninput="OnValueInput"
+                   @onkeydown="OnValueKeyDown" />
+        }
+
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    disabled="@(ActiveFilter is null)"
+                    @onclick="ClearAsync">
+                @Texts.ClearFilterLabel
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-primary"
+                    disabled="@(!CanApply)"
+                    @onclick="ApplyAsync">
+                @Texts.ApplyFilterLabel
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly FancyColumnFilterOperator[] Operators = Enum.GetValues<FancyColumnFilterOperator>();
+
+    private readonly string popupId = $"fancy-filter-{Guid.NewGuid():N}";
+    private ElementReference anchorElement;
+    private ElementReference popupElement;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<FancyColumnFilterPopup>? dotNetReference;
+    private FancyColumnFilterOperator draftOperator = FancyColumnFilterOperator.Contains;
+    private string draftValue = string.Empty;
+    private bool isOpen;
+
+    [Parameter, EditorRequired]
+    public string ColumnKey { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ColumnTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public FancyColumnFilter? ActiveFilter { get; set; }
+
+    [Parameter, EditorRequired]
+    public FancyTableTexts Texts { get; set; } = FancyTableTexts.Default;
+
+    [Parameter]
+    public EventCallback<FancyColumnFilter> OnApply { get; set; }
+
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+
+    private FancyColumnFilter Draft => new(
+        ColumnKey,
+        draftOperator,
+        draftOperator.RequiresValue() ? draftValue : null);
+
+    private bool CanApply => Draft.IsEffective();
+
+    private async Task OpenAsync()
+    {
+        draftOperator = ActiveFilter?.Operator ?? FancyColumnFilterOperator.Contains;
+        draftValue = ActiveFilter?.Value ?? string.Empty;
+        isOpen = true;
+
+        module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/SoPro.FancyTable/fancy-table-filter.js");
+        dotNetReference ??= DotNetObjectReference.Create(this);
+        await module.InvokeVoidAsync("show", anchorElement, popupElement, dotNetReference);
+    }
+
+    private void OnValueInput(ChangeEventArgs args)
+    {
+        draftValue = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task OnValueKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && CanApply)
+        {
+            await ApplyAsync();
+        }
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (!CanApply)
+        {
+            return;
+        }
+
+        await OnApply.InvokeAsync(Draft);
+        await HideAsync();
+    }
+
+    private async Task ClearAsync()
+    {
+        await OnClear.InvokeAsync();
+        await HideAsync();
+    }
+
+    private async Task HideAsync()
+    {
+        if (module is not null)
+        {
+            await module.InvokeVoidAsync("hide", popupElement);
+        }
+    }
+
+    [JSInvokable]
+    public Task OnPopoverClosed()
+    {
+        isOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private string GetOperatorLabel(FancyColumnFilterOperator op) => op switch
+    {
+        FancyColumnFilterOperator.Equals => Texts.FilterOperatorEqualsLabel,
+        FancyColumnFilterOperator.NotEquals => Texts.FilterOperatorNotEqualsLabel,
+        FancyColumnFilterOperator.Contains => Texts.FilterOperatorContainsLabel,
+        FancyColumnFilterOperator.NotContains => Texts.FilterOperatorNotContainsLabel,
+        FancyColumnFilterOperator.StartsWith => Texts.FilterOperatorStartsWithLabel,
+        FancyColumnFilterOperator.EndsWith => Texts.FilterOperatorEndsWithLabel,
+        FancyColumnFilterOperator.IsEmpty => Texts.FilterOperatorIsEmptyLabel,
+        FancyColumnFilterOperator.IsNotEmpty => Texts.FilterOperatorIsNotEmptyLabel,
+        _ => op.ToString()
+    };
+
+    private static string FormatColumnLabel(string format, string title) =>
+        string.Format(CultureInfo.CurrentCulture, format, title);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try
+            {
+                await module.InvokeVoidAsync("dispose", popupElement);
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        dotNetReference?.Dispose();
+    }
+}

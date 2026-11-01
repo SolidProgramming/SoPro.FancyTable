@@ -66,4 +66,40 @@
   <data name="ReorderColumnFormat" xml:space="preserve">
     <value>Spalte {0} neu anordnen</value>
   </data>
+  <data name="FilterColumnFormat" xml:space="preserve">
+    <value>Spalte {0} filtern</value>
+  </data>
+  <data name="FilterValuePlaceholder" xml:space="preserve">
+    <value>Wert</value>
+  </data>
+  <data name="ApplyFilterLabel" xml:space="preserve">
+    <value>Anwenden</value>
+  </data>
+  <data name="ClearFilterLabel" xml:space="preserve">
+    <value>Zurücksetzen</value>
+  </data>
+  <data name="FilterOperatorEqualsLabel" xml:space="preserve">
+    <value>Ist</value>
+  </data>
+  <data name="FilterOperatorNotEqualsLabel" xml:space="preserve">
+    <value>Ist nicht</value>
+  </data>
+  <data name="FilterOperatorContainsLabel" xml:space="preserve">
+    <value>Enthält</value>
+  </data>
+  <data name="FilterOperatorNotContainsLabel" xml:space="preserve">
+    <value>Enthält nicht</value>
+  </data>
+  <data name="FilterOperatorStartsWithLabel" xml:space="preserve">
+    <value>Beginnt mit</value>
+  </data>
+  <data name="FilterOperatorEndsWithLabel" xml:space="preserve">
+    <value>Endet mit</value>
+  </data>
+  <data name="FilterOperatorIsEmptyLabel" xml:space="preserve">
+    <value>Ist leer</value>
+  </data>
+  <data name="FilterOperatorIsNotEmptyLabel" xml:space="preserve">
+    <value>Ist nicht leer</value>
+  </data>
 </root>
