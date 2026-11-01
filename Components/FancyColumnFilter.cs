@@ -1,13 +1,13 @@
 public enum FancyColumnFilterOperator
 {
-    Equals,
-    NotEquals,
-    Contains,
-    NotContains,
-    StartsWith,
-    EndsWith,
-    IsEmpty,
-    IsNotEmpty
+    Equals = 0,
+    NotEquals = 1,
+    Contains = 2,
+    NotContains = 3,
+    StartsWith = 4,
+    EndsWith = 5,
+    IsEmpty = 6,
+    IsNotEmpty = 7
 }
 
 public sealed record FancyColumnFilter(string Key, FancyColumnFilterOperator Operator, string? Value = null);

@@ -37,10 +37,15 @@ export function show(anchor, popup, dotNet) {
     let left = Math.min(rect.left, window.innerWidth - margin - popup.offsetWidth);
     left = Math.max(left, margin);
 
+    let top = rect.bottom + 4;
+    if (top + popup.offsetHeight > window.innerHeight - margin) {
+        top = Math.max(rect.top - 4 - popup.offsetHeight, margin);
+    }
+
     popup.style.position = "fixed";
     popup.style.inset = "auto";
     popup.style.margin = "0";
-    popup.style.top = `${rect.bottom + 4}px`;
+    popup.style.top = `${top}px`;
     popup.style.left = `${left}px`;
 
     (popup.querySelector("input") ?? popup.querySelector("select"))?.focus();

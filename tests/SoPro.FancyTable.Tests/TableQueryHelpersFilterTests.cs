@@ -1,5 +1,14 @@
 public sealed class TableQueryHelpersFilterTests
 {
+    [Fact]
+    public void FilterOperator_HasStableExplicitValues()
+    {
+        Assert.Equal(0, (int)FancyColumnFilterOperator.Equals);
+        Assert.Equal(1, (int)FancyColumnFilterOperator.NotEquals);
+        Assert.Equal(6, (int)FancyColumnFilterOperator.IsEmpty);
+        Assert.Equal(7, (int)FancyColumnFilterOperator.IsNotEmpty);
+    }
+
     private sealed record Person(string? Name, string? City);
 
     private static readonly IReadOnlyList<FancyColumn<Person>> Columns = new List<FancyColumn<Person>>

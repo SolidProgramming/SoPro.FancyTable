@@ -504,9 +504,9 @@
     private static IEnumerable<TItem> FilterNullItems(IEnumerable<TItem> items) =>
         items.Where(static item => item is not null);
 
-    private bool MatchesNode(TItem item, string filter) =>
+    private bool MatchesNode(TItem item, string filter, IReadOnlyList<FancyColumnFilter> activeFilters) =>
         (string.IsNullOrWhiteSpace(filter) || TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate))
-        && TableQueryHelpers.MatchesColumnFilters(item, columnFilters.GetFilters(), Columns);
+        && (activeFilters.Count == 0 || TableQueryHelpers.MatchesColumnFilters(item, activeFilters, Columns));
 
     private PagedNodesResult GetPagedNodes()
     {
@@ -533,9 +533,10 @@
         }
         else
         {
+            IReadOnlyList<FancyColumnFilter> activeFilters = columnFilters.GetFilters();
             foreach (TreeNodeState<TItem> root in RootNodes)
             {
-                CollectSearchNodes(root, filter, visibleNodes, out _);
+                CollectSearchNodes(root, filter, activeFilters, visibleNodes, out _);
             }
         }
 
@@ -560,16 +561,17 @@
     private bool CollectSearchNodes(
         TreeNodeState<TItem> node,
         string filter,
+        IReadOnlyList<FancyColumnFilter> activeFilters,
         List<TreeNodeState<TItem>> visibleNodes,
         out bool includeNode)
     {
-        bool matchesSelf = MatchesNode(node.Item, filter);
+        bool matchesSelf = MatchesNode(node.Item, filter, activeFilters);
         int insertIndex = visibleNodes.Count;
         List<TreeNodeState<TItem>> childMatches = [];
 
         foreach (TreeNodeState<TItem> child in node.Children)
         {
-            CollectSearchNodes(child, filter, childMatches, out bool childIncluded);
+            CollectSearchNodes(child, filter, activeFilters, childMatches, out bool childIncluded);
             _ = childIncluded;
         }
 
