@@ -103,6 +103,16 @@
                                 </button>
                             }
 
+                            @if (column.Filterable)
+                            {
+                                <FancyColumnFilterPopup ColumnKey="@column.Key"
+                                                        ColumnTitle="@column.Title"
+                                                        ActiveFilter="columnFilters.Get(column.Key)"
+                                                        Texts="ResolvedTexts"
+                                                        OnApply="ApplyColumnFilterAsync"
+                                                        OnClear="() => ClearColumnFilterAsync(column.Key)" />
+                            }
+
                             @if (column.Hideable && !IsPinnedTreeColumn(column.Key))
                             {
                                 <button class="btn btn-link p-0 border-0" @onclick="() => HideColumn(column.Key)">
@@ -155,6 +165,10 @@
             {
                 <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowColumn(key)">
                     <i class="bi bi-eye me-1"></i>@column.Title
+                    @if (columnFilters.Get(key) is not null)
+                    {
+                        <i class="bi bi-funnel-fill ms-1" aria-hidden="true"></i>
+                    }
                 </button>
             }
         }
@@ -318,8 +332,15 @@
     [Parameter]
     public EventCallback<IReadOnlyList<FancyColumnLayout>> ColumnLayoutChanged { get; set; }
 
+    [Parameter]
+    public IReadOnlyList<FancyColumnFilter>? InitialColumnFilters { get; set; }
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<FancyColumnFilter>> ColumnFiltersChanged { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly FancyColumnLayoutController<TItem> columnLayout = new();
+    private readonly FancyColumnFilterState<TItem> columnFilters = new();
     private readonly Dictionary<TItem, bool> ExpandedStates = new();
     private readonly List<TreeNodeState<TItem>> RootNodes = [];
     private ElementReference tableElement;
@@ -398,6 +419,7 @@
             HiddenColumns.Remove(pinnedKey);
         }
 
+        columnFilters.Synchronize(Columns, InitialColumnFilters);
         SyncPaginationStateFromParameters();
         RebuildTree();
     }
@@ -482,8 +504,9 @@
     private static IEnumerable<TItem> FilterNullItems(IEnumerable<TItem> items) =>
         items.Where(static item => item is not null);
 
-    private bool MatchesSearch(TItem item, string filter) =>
-        TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate);
+    private bool MatchesNode(TItem item, string filter) =>
+        (string.IsNullOrWhiteSpace(filter) || TableQueryHelpers.MatchesSearch(item, filter, Columns, SearchPredicate))
+        && TableQueryHelpers.MatchesColumnFilters(item, columnFilters.GetFilters(), Columns);
 
     private PagedNodesResult GetPagedNodes()
     {
@@ -501,7 +524,7 @@
         string filter = CurrentFilter;
         List<TreeNodeState<TItem>> visibleNodes = [];
 
-        if (string.IsNullOrWhiteSpace(filter))
+        if (string.IsNullOrWhiteSpace(filter) && !columnFilters.HasActiveFilters)
         {
             foreach (TreeNodeState<TItem> root in RootNodes)
             {
@@ -540,7 +563,7 @@
         List<TreeNodeState<TItem>> visibleNodes,
         out bool includeNode)
     {
-        bool matchesSelf = MatchesSearch(node.Item, filter);
+        bool matchesSelf = MatchesNode(node.Item, filter);
         int insertIndex = visibleNodes.Count;
         List<TreeNodeState<TItem>> childMatches = [];
 
@@ -584,6 +607,34 @@
         }
 
         return SortAscending ? "bi-sort-up" : "bi-sort-down";
+    }
+
+    private async Task ApplyColumnFilterAsync(FancyColumnFilter filter)
+    {
+        if (columnFilters.Set(filter))
+        {
+            await OnColumnFiltersChangedAsync();
+        }
+    }
+
+    private async Task ClearColumnFilterAsync(string key)
+    {
+        if (columnFilters.Remove(key))
+        {
+            await OnColumnFiltersChangedAsync();
+        }
+    }
+
+    private async Task OnColumnFiltersChangedAsync()
+    {
+        bool pageChanged = paginationCurrentPage != 1;
+        paginationCurrentPage = 1;
+        if (pageChanged)
+        {
+            await CurrentPageChanged.InvokeAsync(1);
+        }
+
+        await ColumnFiltersChanged.InvokeAsync(columnFilters.GetFilters());
     }
 
     private void HideColumn(string key) => HiddenColumns.Add(key);
