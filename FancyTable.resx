@@ -102,4 +102,19 @@
   <data name="FilterOperatorIsNotEmptyLabel" xml:space="preserve">
     <value>Is not empty</value>
   </data>
+  <data name="SortColumnFormat" xml:space="preserve">
+    <value>Sort column {0}</value>
+  </data>
+  <data name="HideColumnFormat" xml:space="preserve">
+    <value>Hide column {0}</value>
+  </data>
+  <data name="FilteredColumnLabel" xml:space="preserve">
+    <value>filtered</value>
+  </data>
+  <data name="FilterOperatorLabel" xml:space="preserve">
+    <value>Operator</value>
+  </data>
+  <data name="ClearSearchLabel" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
 </root>
