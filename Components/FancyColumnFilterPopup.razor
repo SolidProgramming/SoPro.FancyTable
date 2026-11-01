@@ -15,9 +15,14 @@
     <i class="bi @(ActiveFilter is null ? "bi-funnel" : "bi-funnel-fill")" aria-hidden="true"></i>
 </button>
 
-<div popover="auto" id="@popupId" class="fancy-filter-popup" @ref="popupElement">
+<div popover="auto"
+     id="@popupId"
+     class="fancy-filter-popup"
+     role="dialog"
+     aria-label="@FormatColumnLabel(Texts.FilterColumnFormat, ColumnTitle)"
+     @ref="popupElement">
     <div class="d-flex flex-column gap-2 p-2">
-        <select class="form-select form-select-sm" @bind="draftOperator">
+        <select class="form-select form-select-sm" aria-label="@Texts.FilterOperatorLabel" @bind="draftOperator">
             @foreach (FancyColumnFilterOperator op in Operators)
             {
                 <option value="@op.ToString()">@GetOperatorLabel(op)</option>
@@ -29,6 +34,7 @@
             <input type="text"
                    class="form-control form-control-sm"
                    placeholder="@Texts.FilterValuePlaceholder"
+                   aria-label="@Texts.FilterValuePlaceholder"
                    value="@draftValue"
                    @oninput="OnValueInput"
                    @onkeydown="OnValueKeyDown" />

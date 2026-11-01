@@ -20,6 +20,11 @@ public sealed record FancyTableTexts
     public string ShowingVisibleRowsFormat { get; init; } = "Showing {0}-{1} of {2} visible rows";
     public string ResizeColumnFormat { get; init; } = "Resize column {0}";
     public string ReorderColumnFormat { get; init; } = "Reorder column {0}";
+    public string SortColumnFormat { get; init; } = "Sort column {0}";
+    public string HideColumnFormat { get; init; } = "Hide column {0}";
+    public string FilteredColumnLabel { get; init; } = "filtered";
+    public string FilterOperatorLabel { get; init; } = "Operator";
+    public string ClearSearchLabel { get; init; } = "Clear search";
     public string FilterColumnFormat { get; init; } = "Filter column {0}";
     public string FilterValuePlaceholder { get; init; } = "Value";
     public string ApplyFilterLabel { get; init; } = "Apply";

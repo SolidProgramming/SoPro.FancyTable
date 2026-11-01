@@ -220,6 +220,8 @@ private static readonly FancyTableTexts GermanTexts = FancyTableTexts.Default wi
 
 The column filter popup adds these keys (English defaults): `FilterColumnFormat` ("Filter column {0}"), `FilterValuePlaceholder`, `ApplyFilterLabel`, `ClearFilterLabel`, and one label per operator: `FilterOperatorEqualsLabel`, `FilterOperatorNotEqualsLabel`, `FilterOperatorContainsLabel`, `FilterOperatorNotContainsLabel`, `FilterOperatorStartsWithLabel`, `FilterOperatorEndsWithLabel`, `FilterOperatorIsEmptyLabel`, `FilterOperatorIsNotEmptyLabel`.
 
+Accessibility labels for the table header, search and filter popup use these keys (English defaults): `SortColumnFormat` ("Sort column {0}"), `HideColumnFormat` ("Hide column {0}"), `FilteredColumnLabel` ("filtered", read by screen readers on restore buttons of filtered hidden columns), `FilterOperatorLabel` ("Operator") and `ClearSearchLabel` ("Clear search"). The search input and search button reuse `SearchPlaceholder` as their accessible name.
+
 The package also includes `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` so the same string catalog is already available for a future resource-driven integration layer.
 
 ## Column Configuration
@@ -622,7 +624,7 @@ Global expand/collapse actions always operate on the full tree, not just on the 
 
 ## Component Dependencies
 
-- **Bootstrap 5**: For styling and grid utilities (MIT License)
+- **Bootstrap 5.3+**: For styling, grid utilities and theme/dark mode support via `data-bs-theme` (MIT License). With Bootstrap 5.0-5.2 the tables work and keep the default light look through built-in colour fallbacks.
 - **Bootstrap Icons**: For UI icons (search, sort, eye, etc.) (MIT License)
 
 ## License
