@@ -96,6 +96,16 @@
                                 </button>
                             }
 
+                            @if (column.Filterable)
+                            {
+                                <FancyColumnFilterPopup ColumnKey="@column.Key"
+                                                        ColumnTitle="@column.Title"
+                                                        ActiveFilter="columnFilters.Get(column.Key)"
+                                                        Texts="ResolvedTexts"
+                                                        OnApply="ApplyColumnFilterAsync"
+                                                        OnClear="() => ClearColumnFilterAsync(column.Key)" />
+                            }
+
                             @if (column.Hideable)
                             {
                                 <button class="btn btn-link p-0 border-0" @onclick="() => HideColumn(column.Key)">
@@ -145,6 +155,10 @@
             {
                 <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowColumn(key)">
                     <i class="bi bi-eye me-1"></i>@column.Title
+                    @if (columnFilters.Get(key) is not null)
+                    {
+                        <i class="bi bi-funnel-fill ms-1" aria-hidden="true"></i>
+                    }
                 </button>
             }
         }
@@ -293,8 +307,15 @@
     [Parameter]
     public EventCallback<IReadOnlyList<FancyColumnLayout>> ColumnLayoutChanged { get; set; }
 
+    [Parameter]
+    public IReadOnlyList<FancyColumnFilter>? InitialColumnFilters { get; set; }
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<FancyColumnFilter>> ColumnFiltersChanged { get; set; }
+
     private readonly HashSet<string> HiddenColumns = new(StringComparer.Ordinal);
     private readonly FancyColumnLayoutController<TItem> columnLayout = new();
+    private readonly FancyColumnFilterState<TItem> columnFilters = new();
     private ElementReference tableElement;
     private IJSObjectReference? columnModule;
     private DotNetObjectReference<FancyTable<TItem>>? dotNetReference;
@@ -359,6 +380,7 @@
     protected override void OnParametersSet()
     {
         columnLayout.Synchronize(Columns, InitialColumnLayout, pinnedColumnKey: null);
+        columnFilters.Synchronize(Columns, InitialColumnFilters);
         SyncPaginationStateFromParameters();
     }
 
@@ -384,8 +406,10 @@
     private PagedItemsResult GetPagedItems()
     {
         string filter = string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
+        IEnumerable<TItem> searchedItems = TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate);
+        IEnumerable<TItem> columnFilteredItems = TableQueryHelpers.ApplyColumnFilters(searchedItems, columnFilters.GetFilters(), Columns);
         IReadOnlyList<TItem> filteredAndSortedItems = TableQueryHelpers
-            .ApplySort(TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate), SortColumnKey, SortAscending, Columns)
+            .ApplySort(columnFilteredItems, SortColumnKey, SortAscending, Columns)
             .ToList();
 
         FancyPaginationContext<TItem> paginationContext = BuildPaginationContext(
@@ -461,6 +485,34 @@
         }
 
         return SortAscending ? "bi-sort-up" : "bi-sort-down";
+    }
+
+    private async Task ApplyColumnFilterAsync(FancyColumnFilter filter)
+    {
+        if (columnFilters.Set(filter))
+        {
+            await OnColumnFiltersChangedAsync();
+        }
+    }
+
+    private async Task ClearColumnFilterAsync(string key)
+    {
+        if (columnFilters.Remove(key))
+        {
+            await OnColumnFiltersChangedAsync();
+        }
+    }
+
+    private async Task OnColumnFiltersChangedAsync()
+    {
+        bool pageChanged = paginationCurrentPage != 1;
+        paginationCurrentPage = 1;
+        if (pageChanged)
+        {
+            await CurrentPageChanged.InvokeAsync(1);
+        }
+
+        await ColumnFiltersChanged.InvokeAsync(columnFilters.GetFilters());
     }
 
     private void HideColumn(string key) => HiddenColumns.Add(key);
