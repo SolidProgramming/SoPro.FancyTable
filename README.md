@@ -33,6 +33,22 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Hideable columns via `Hideable`
 - Hidden-column restore buttons below the table
 
+### Column filters
+- Opt-in per column via `Filterable`; a funnel icon in the header opens a popup with an operator and a value
+- Eight case-insensitive text operators: `Equals`, `NotEquals`, `Contains`, `NotContains`, `StartsWith`, `EndsWith`, `IsEmpty`, `IsNotEmpty`
+- Filters combine with AND across columns and with the active search
+- Filtered text comes from `SearchTextSelector`, falling back to `ValueSelector`
+- `Equals` and `NotEquals` compare trimmed text; the other operators use the value as typed
+- `IsEmpty` and `IsNotEmpty` take no value
+- Filters apply explicitly (Apply button or Enter); Esc or a click outside discards the draft
+- Every filter change resets the table to page 1
+- A hidden column keeps its filter; its restore button shows a funnel icon
+- `ColumnFiltersChanged` delivers the complete list in column definition order
+- A `Filterable` column needs a `ValueSelector` or `SearchTextSelector`; `CellTemplate`-only columns have empty filter text
+- Operator values are stable integers; use `JsonStringEnumConverter` if you prefer names in persisted JSON
+- Requires a browser with the HTML Popover API (Baseline since 2024)
+- Host-owned persistence through `InitialColumnFilters` and `ColumnFiltersChanged`
+
 ### Column layout
 - Opt-in resizing and reordering for flat and tree tables
 - Content-based natural widths with optional `Width`, `MinWidth`, and `MaxWidth`
@@ -106,6 +122,8 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `EnableColumnReordering` | `bool` | Enables reorder handles; disabled by default |
 | `InitialColumnLayout` | `IReadOnlyList<FancyColumnLayout>?` | Initial order and optional widths, applied once per component instance |
 | `ColumnLayoutChanged` | `EventCallback<IReadOnlyList<FancyColumnLayout>>` | Raised with the complete normalized layout after a resize or reorder |
+| `InitialColumnFilters` | `IReadOnlyList<FancyColumnFilter>?` | Initial column filters, applied once per component instance; entries for unknown or non-`Filterable` columns are ignored |
+| `ColumnFiltersChanged` | `EventCallback<IReadOnlyList<FancyColumnFilter>>` | Raised with the complete list of active filters after a filter is applied or cleared |
 
 ## Tree Table Parameters
 
@@ -200,6 +218,8 @@ private static readonly FancyTableTexts GermanTexts = FancyTableTexts.Default wi
 };
 ```
 
+The column filter popup adds these keys (English defaults): `FilterColumnFormat` ("Filter column {0}"), `FilterValuePlaceholder`, `ApplyFilterLabel`, `ClearFilterLabel`, and one label per operator: `FilterOperatorEqualsLabel`, `FilterOperatorNotEqualsLabel`, `FilterOperatorContainsLabel`, `FilterOperatorNotContainsLabel`, `FilterOperatorStartsWithLabel`, `FilterOperatorEndsWithLabel`, `FilterOperatorIsEmptyLabel`, `FilterOperatorIsNotEmptyLabel`.
+
 The package also includes `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` so the same string catalog is already available for a future resource-driven integration layer.
 
 ## Column Configuration
@@ -213,6 +233,7 @@ Each column is configured using `FancyColumn<TItem>`:
 | `Sortable` | `bool` | Whether the column can be sorted |
 | `Searchable` | `bool` | Whether the column is included in search (default: `true`) |
 | `Hideable` | `bool` | Whether the column can be hidden by the user |
+| `Filterable` | `bool` | Whether the header shows a filter popup for this column (default: `false`) |
 | `Resizable` | `bool` | Whether the column can be resized when resizing is enabled (default: `true`) |
 | `Reorderable` | `bool` | Whether the column can be reordered when reordering is enabled (default: `true`) |
 | `Width` | `double?` | Initial width in pixels; natural content width is used when omitted |
@@ -247,6 +268,47 @@ Each column is configured using `FancyColumn<TItem>`:
 Columns without `Width` or `MaxWidth` initially follow the currently rendered content. A `MaxWidth`-constrained `ValueSelector` cell uses an ellipsis when necessary; click it, or focus it and press `Enter`/`Space`, to toggle the full value. Custom `CellTemplate` content retains full control over its own overflow behavior.
 
 The first declared column of `FancyTreeTable` remains visible and fixed at the left while reordering is enabled. Non-reorderable columns act as boundaries that other columns cannot cross. Hidden columns retain their saved position and width.
+
+### Column filters
+
+Mark columns with `Filterable = true`. The host persists the filters; the component stores nothing itself. This example uses `localStorage` through `JSRuntime`:
+
+```razor
+@inject IJSRuntime JS
+@using System.Text.Json
+
+@if (filtersLoaded)
+{
+    <FancyTable TItem="PersonRow"
+                Items="People"
+                Columns="PeopleColumns"
+                InitialColumnFilters="SavedFilters"
+                ColumnFiltersChanged="SaveFiltersAsync" />
+}
+
+@code {
+    private IReadOnlyList<FancyColumnFilter>? SavedFilters;
+    private bool filtersLoaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        string? json = await JS.InvokeAsync<string?>("localStorage.getItem", "people-filters");
+        SavedFilters = json is null ? null : JsonSerializer.Deserialize<List<FancyColumnFilter>>(json);
+        filtersLoaded = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveFiltersAsync(IReadOnlyList<FancyColumnFilter> filters) =>
+        await JS.InvokeVoidAsync("localStorage.setItem", "people-filters", JsonSerializer.Serialize(filters));
+}
+```
+
+`InitialColumnFilters` is read once, on the table's first render, so load persisted filters before rendering the table. `localStorage` is only available after the first render (it is not during prerendering), which is why the example renders the table once `filtersLoaded` is set.
 
 ## Setup
 
@@ -555,6 +617,7 @@ Global expand/collapse actions always operate on the full tree, not just on the 
 
 - Search shows matching nodes and their ancestors, so hits remain visible in context
 - Clearing the search restores the manual expand/collapse state from before the search
+- Column filters apply together with search: a node is shown only if it matches the search and the filters itself, and its ancestors are kept as the path to it
 - Sorting keeps the tree structure intact by sorting only within each sibling group
 
 ## Component Dependencies

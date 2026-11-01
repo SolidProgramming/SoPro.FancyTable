@@ -20,4 +20,16 @@ public sealed record FancyTableTexts
     public string ShowingVisibleRowsFormat { get; init; } = "Showing {0}-{1} of {2} visible rows";
     public string ResizeColumnFormat { get; init; } = "Resize column {0}";
     public string ReorderColumnFormat { get; init; } = "Reorder column {0}";
+    public string FilterColumnFormat { get; init; } = "Filter column {0}";
+    public string FilterValuePlaceholder { get; init; } = "Value";
+    public string ApplyFilterLabel { get; init; } = "Apply";
+    public string ClearFilterLabel { get; init; } = "Clear";
+    public string FilterOperatorEqualsLabel { get; init; } = "Is";
+    public string FilterOperatorNotEqualsLabel { get; init; } = "Is not";
+    public string FilterOperatorContainsLabel { get; init; } = "Contains";
+    public string FilterOperatorNotContainsLabel { get; init; } = "Does not contain";
+    public string FilterOperatorStartsWithLabel { get; init; } = "Starts with";
+    public string FilterOperatorEndsWithLabel { get; init; } = "Ends with";
+    public string FilterOperatorIsEmptyLabel { get; init; } = "Is empty";
+    public string FilterOperatorIsNotEmptyLabel { get; init; } = "Is not empty";
 }

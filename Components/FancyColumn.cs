@@ -10,6 +10,7 @@ public sealed class FancyColumn<TItem>
     public bool Hideable { get; init; }
     public bool Resizable { get; init; } = true;
     public bool Reorderable { get; init; } = true;
+    public bool Filterable { get; init; }
 
     public double? Width { get; init; }
     public double? MinWidth { get; init; }

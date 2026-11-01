@@ -44,7 +44,62 @@ internal static class TableQueryHelpers
 
         return columns
             .Where(c => c.Searchable)
-            .Select(c => c.SearchTextSelector?.Invoke(item) ?? c.ValueSelector?.Invoke(item)?.ToString())
+            .Select(c => GetColumnText(c, item))
             .Any(v => !string.IsNullOrWhiteSpace(v) && v.Contains(filter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    internal static string GetColumnText<TItem>(FancyColumn<TItem> column, TItem item)
+    {
+        return column.SearchTextSelector?.Invoke(item) ?? column.ValueSelector?.Invoke(item)?.ToString() ?? string.Empty;
+    }
+
+    internal static IEnumerable<TItem> ApplyColumnFilters<TItem>(
+        IEnumerable<TItem> items,
+        IReadOnlyCollection<FancyColumnFilter> filters,
+        IReadOnlyList<FancyColumn<TItem>> columns)
+    {
+        if (filters.Count == 0)
+            return items;
+
+        return items.Where(item => MatchesColumnFilters(item, filters, columns));
+    }
+
+    internal static bool MatchesColumnFilters<TItem>(
+        TItem item,
+        IReadOnlyCollection<FancyColumnFilter> filters,
+        IReadOnlyList<FancyColumn<TItem>> columns)
+    {
+        foreach (FancyColumnFilter filter in filters)
+        {
+            if (!filter.IsEffective())
+                continue;
+
+            FancyColumn<TItem>? column = columns.FirstOrDefault(c => c.Key == filter.Key);
+            if (column is null || !column.Filterable)
+                continue;
+
+            if (!MatchesFilter(GetColumnText(column, item), filter))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool MatchesFilter(string text, FancyColumnFilter filter)
+    {
+        string value = filter.Value ?? string.Empty;
+
+        return filter.Operator switch
+        {
+            FancyColumnFilterOperator.Equals => string.Equals(text.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.NotEquals => !string.Equals(text.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.Contains => text.Contains(value, StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.NotContains => !text.Contains(value, StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.StartsWith => text.StartsWith(value, StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.EndsWith => text.EndsWith(value, StringComparison.OrdinalIgnoreCase),
+            FancyColumnFilterOperator.IsEmpty => string.IsNullOrWhiteSpace(text),
+            FancyColumnFilterOperator.IsNotEmpty => !string.IsNullOrWhiteSpace(text),
+            _ => true
+        };
     }
 }
