@@ -163,4 +163,21 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
 
         module.VerifyInvoke("show");
     }
+
+    [Fact]
+    public async Task Reopen_ShowsAfterRenderWithResetDraft()
+    {
+        BunitJSModuleInterop module = JSInterop.SetupModule(ModulePath);
+        module.Mode = JSRuntimeMode.Loose;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(new FancyColumnFilter("name", FancyColumnFilterOperator.Equals, "Anna"));
+
+        Open(cut);
+        cut.Find("select").Change("IsEmpty");
+        Assert.Empty(cut.FindAll("input"));
+        await cut.InvokeAsync(() => cut.Instance.OnPopoverClosed());
+        Open(cut);
+
+        Assert.Single(cut.FindAll("input"));
+        Assert.Equal(2, module.Invocations["show"].Count);
+    }
 }

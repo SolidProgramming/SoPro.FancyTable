@@ -12,7 +12,10 @@ export function show(anchor, popup, dotNet) {
     popup.addEventListener("toggle", event => {
         if (event.newState !== "closed") return;
         dispose(popup);
-        anchor.focus();
+        const active = document.activeElement;
+        if (!active || active === document.body || popup.contains(active)) {
+            anchor.focus({ preventScroll: true });
+        }
         dotNet?.invokeMethodAsync("OnPopoverClosed").catch(() => { });
     }, { signal });
 
@@ -40,7 +43,7 @@ export function show(anchor, popup, dotNet) {
     popup.style.top = `${rect.bottom + 4}px`;
     popup.style.left = `${left}px`;
 
-    popup.querySelector("input, select")?.focus();
+    (popup.querySelector("input") ?? popup.querySelector("select"))?.focus();
 }
 
 export function hide(popup) {
