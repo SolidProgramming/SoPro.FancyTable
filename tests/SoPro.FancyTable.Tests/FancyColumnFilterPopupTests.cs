@@ -180,4 +180,44 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
         Assert.Single(cut.FindAll("input"));
         Assert.Equal(2, module.Invocations["show"].Count);
     }
+
+    [Fact]
+    public void Button_IsNativeInvokerForPopover()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup();
+
+        string target = cut.Find("button.fancy-filter-button").GetAttribute("popovertarget")!;
+
+        Assert.False(string.IsNullOrEmpty(target));
+        Assert.Equal(target, cut.Find("div[popover]").GetAttribute("id"));
+    }
+
+    [Fact]
+    public void ClickWhileOpen_DoesNotShowAgainNorResetDraft()
+    {
+        BunitJSModuleInterop module = JSInterop.SetupModule(ModulePath);
+        module.Mode = JSRuntimeMode.Loose;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(new FancyColumnFilter("name", FancyColumnFilterOperator.Equals, "Anna"));
+
+        Open(cut);
+        cut.Find("input").Input("xyz");
+        Open(cut);
+
+        Assert.Single(module.Invocations["show"]);
+        Assert.Equal("true", cut.Find("button.fancy-filter-button").GetAttribute("aria-expanded"));
+        cut.Find("select").Change("Equals");
+        Assert.Equal("xyz", cut.Find("input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task OnPopoverClosed_ResetsAriaExpanded()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup();
+
+        Open(cut);
+        Assert.Equal("true", cut.Find("button.fancy-filter-button").GetAttribute("aria-expanded"));
+        await cut.InvokeAsync(() => cut.Instance.OnPopoverClosed());
+
+        Assert.Equal("false", cut.Find("button.fancy-filter-button").GetAttribute("aria-expanded"));
+    }
 }

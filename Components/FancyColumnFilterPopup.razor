@@ -9,6 +9,7 @@
         aria-label="@FormatColumnLabel(Texts.FilterColumnFormat, ColumnTitle)"
         aria-haspopup="dialog"
         aria-expanded="@(isOpen ? "true" : "false")"
+        popovertarget="@popupId"
         @ref="anchorElement"
         @onclick="Open">
     <i class="bi @(ActiveFilter is null ? "bi-funnel" : "bi-funnel-fill")" aria-hidden="true"></i>
@@ -90,6 +91,13 @@
 
     private void Open()
     {
+        // The button is a native popover invoker: while open, this click is closed by the browser
+        // (reported back through OnPopoverClosed), so the open path must not run again.
+        if (isOpen)
+        {
+            return;
+        }
+
         draftOperator = ActiveFilter?.Operator ?? FancyColumnFilterOperator.Contains;
         draftValue = ActiveFilter?.Value ?? string.Empty;
         isOpen = true;

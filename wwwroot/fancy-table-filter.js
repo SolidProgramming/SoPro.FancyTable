@@ -1,7 +1,11 @@
 const instances = new WeakMap();
 
-export function show(anchor, popup, dotNet) {
+export async function show(anchor, popup, dotNet) {
     if (!anchor || !popup) return;
+
+    // The anchor's popovertarget opens the popover natively when its click finishes. Wait one task so
+    // that activation has run; otherwise showPopover() here would be undone by the native toggle.
+    await new Promise(resolve => setTimeout(resolve));
 
     dispose(popup);
 
@@ -26,10 +30,12 @@ export function show(anchor, popup, dotNet) {
         close();
     }, { signal, capture: true });
 
-    try {
-        popup.showPopover();
-    } catch (error) {
-        if (error?.name !== "InvalidStateError") throw error;
+    if (!popup.matches(":popover-open")) {
+        try {
+            popup.showPopover();
+        } catch (error) {
+            if (error?.name !== "InvalidStateError") throw error;
+        }
     }
 
     const rect = anchor.getBoundingClientRect();
