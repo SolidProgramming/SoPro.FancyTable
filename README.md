@@ -38,6 +38,15 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Eight case-insensitive text operators: `Equals`, `NotEquals`, `Contains`, `NotContains`, `StartsWith`, `EndsWith`, `IsEmpty`, `IsNotEmpty`
 - Filters combine with AND across columns and with the active search
 - Filtered text comes from `SearchTextSelector`, falling back to `ValueSelector`
+- `Equals` and `NotEquals` compare trimmed text; the other operators use the value as typed
+- `IsEmpty` and `IsNotEmpty` take no value
+- Filters apply explicitly (Apply button or Enter); Esc or a click outside discards the draft
+- Every filter change resets the table to page 1
+- A hidden column keeps its filter; its restore button shows a funnel icon
+- `ColumnFiltersChanged` delivers the complete list in column definition order
+- A `Filterable` column needs a `ValueSelector` or `SearchTextSelector`; `CellTemplate`-only columns have empty filter text
+- Operator values are stable integers; use `JsonStringEnumConverter` if you prefer names in persisted JSON
+- Requires a browser with the HTML Popover API (Baseline since 2024)
 - Host-owned persistence through `InitialColumnFilters` and `ColumnFiltersChanged`
 
 ### Column layout
@@ -268,19 +277,30 @@ Mark columns with `Filterable = true`. The host persists the filters; the compon
 @inject IJSRuntime JS
 @using System.Text.Json
 
-<FancyTable TItem="PersonRow"
-            Items="People"
-            Columns="PeopleColumns"
-            InitialColumnFilters="SavedFilters"
-            ColumnFiltersChanged="SaveFiltersAsync" />
+@if (filtersLoaded)
+{
+    <FancyTable TItem="PersonRow"
+                Items="People"
+                Columns="PeopleColumns"
+                InitialColumnFilters="SavedFilters"
+                ColumnFiltersChanged="SaveFiltersAsync" />
+}
 
 @code {
     private IReadOnlyList<FancyColumnFilter>? SavedFilters;
+    private bool filtersLoaded;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
         string? json = await JS.InvokeAsync<string?>("localStorage.getItem", "people-filters");
         SavedFilters = json is null ? null : JsonSerializer.Deserialize<List<FancyColumnFilter>>(json);
+        filtersLoaded = true;
+        StateHasChanged();
     }
 
     private async Task SaveFiltersAsync(IReadOnlyList<FancyColumnFilter> filters) =>
@@ -288,7 +308,7 @@ Mark columns with `Filterable = true`. The host persists the filters; the compon
 }
 ```
 
-`InitialColumnFilters` is applied once, so load the saved list before the table first renders. `localStorage` is not available during prerendering; in that case load it in `OnAfterRenderAsync` and render the table afterwards.
+`InitialColumnFilters` is read once, on the table's first render, so load persisted filters before rendering the table. `localStorage` is only available after the first render (it is not during prerendering), which is why the example renders the table once `filtersLoaded` is set.
 
 ## Setup
 
