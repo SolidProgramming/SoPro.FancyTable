@@ -363,7 +363,7 @@
     private int paginationPageSize = 25;
     private bool paginationStateInitialized;
 
-    private FancyTableTexts ResolvedTexts => Texts ?? FancyTableTexts.Default;
+    private FancyTableTexts ResolvedTexts => Texts ?? FancyTableTexts.Current;
     private string ResolvedSearchPlaceholder => ResolvedTexts.SearchPlaceholder;
     private string ResolvedClearSearchLabel => ResolvedTexts.ClearSearchLabel;
     private string ResolvedRowsPerPageLabel => ResolvedTexts.RowsPerPageLabel;
