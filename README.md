@@ -202,7 +202,13 @@ For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth 
 
 Without a `Texts` parameter, tables use `FancyTableTexts.Current`: the built-in texts for the current UI culture (`CultureInfo.CurrentUICulture`). English and German are bundled (`FancyTable.resx`, `FancyTable.en.resx`, `FancyTable.de.resx`). Regional cultures use their parent language (`de-AT` → German), and every other culture falls back to English.
 
-> **Behavior change:** apps whose UI culture is German now show German table texts automatically. To keep the previous English texts, pass `Texts="FancyTableTexts.Default"`.
+> **Behavior change:** apps whose UI culture is German now show German table texts automatically. This includes Blazor Server apps without request localization that run on a server or container with a German OS culture. To keep the previous English texts, pass `Texts="FancyTableTexts.Default"`.
+
+Where the UI culture comes from depends on the hosting model:
+
+- **Blazor Server / SSR:** the request culture set by `UseRequestLocalization` (see below). Without request localization, the server process's OS culture applies.
+- **Blazor WebAssembly:** the browser language by default. To switch languages, set the culture before the app starts and reload the page, because satellite assemblies are loaded for the startup culture.
+- **Trimmed globalization:** with `<InvariantGlobalization>true</InvariantGlobalization>`, or with `<SatelliteResourceLanguages>` excluding `de`, the German texts are not available and the tables show English.
 
 Set the UI culture the usual ASP.NET Core way, for example with request localization:
 
@@ -212,6 +218,8 @@ app.UseRequestLocalization(new RequestLocalizationOptions()
     .AddSupportedCultures("en", "de")
     .AddSupportedUICultures("en", "de"));
 ```
+
+Column titles (`FancyColumn.Title`) and your own cell content are app content and are not translated by the library. Localize them in your app, for example with `IStringLocalizer`, and build the column definitions at render time when the language can change.
 
 `FancyTableTexts` members:
 
