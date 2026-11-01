@@ -1,6 +1,45 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Reflection;
+using System.Resources;
+
 public sealed record FancyTableTexts
 {
+    private static readonly ResourceManager Resources = new("SoPro.FancyTable.FancyTable", typeof(FancyTableTexts).Assembly);
+    private static readonly ConcurrentDictionary<string, FancyTableTexts> CultureTexts = new(StringComparer.Ordinal);
+
+    // The fixed English texts; not affected by the UI culture.
     public static FancyTableTexts Default { get; } = new();
+
+    // The texts for the current UI culture, from the bundled resources.
+    public static FancyTableTexts Current => ForCulture(CultureInfo.CurrentUICulture);
+
+    public static FancyTableTexts ForCulture(CultureInfo culture)
+    {
+        ArgumentNullException.ThrowIfNull(culture);
+        return CultureTexts.GetOrAdd(culture.Name, _ => LoadTexts(culture));
+    }
+
+    private static FancyTableTexts LoadTexts(CultureInfo culture)
+    {
+        FancyTableTexts texts = Default with { };
+
+        foreach (PropertyInfo property in typeof(FancyTableTexts).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (property.PropertyType != typeof(string) || !property.CanWrite)
+            {
+                continue;
+            }
+
+            string? value = Resources.GetString(property.Name, culture);
+            if (!string.IsNullOrEmpty(value))
+            {
+                property.SetValue(texts, value);
+            }
+        }
+
+        return texts;
+    }
 
     public string SearchPlaceholder { get; init; } = "Search";
     public string RowsPerPageLabel { get; init; } = "Rows per page";

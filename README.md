@@ -63,9 +63,9 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Custom pagination, summary, and page-size templates via `FancyPaginationContext<TItem>`
 
 ### Localization
-- Centralized default UI texts via `FancyTableTexts`
+- Built-in texts follow the UI culture (`CultureInfo.CurrentUICulture`); English and German are bundled
+- Centralized UI texts via `FancyTableTexts` (`Current`, `ForCulture`, fixed English `Default`)
 - Optional per-table text overrides through the `Texts` parameter
-- Bundled `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` for future resource-based integration
 
 ### Hierarchical data
 - Expand/collapse in `FancyTreeTable`
@@ -200,29 +200,49 @@ For flat tables, tree-specific values are neutral: `IsTreeNode = false`, `Depth 
 
 ## Localization
 
-`FancyTableTexts` lets you override all package-owned default UI text without requiring direct `IStringLocalizer` wiring inside the library.
+Without a `Texts` parameter, tables use `FancyTableTexts.Current`: the built-in texts for the current UI culture (`CultureInfo.CurrentUICulture`). English and German are bundled (`FancyTable.resx`, `FancyTable.en.resx`, `FancyTable.de.resx`). Regional cultures use their parent language (`de-AT` → German), and every other culture falls back to English.
 
-Example:
+> **Behavior change:** apps whose UI culture is German now show German table texts automatically. This includes Blazor Server apps without request localization that run on a server or container with a German OS culture. To keep the previous English texts, pass `Texts="FancyTableTexts.Default"`.
+
+Where the UI culture comes from depends on the hosting model:
+
+- **Blazor Server / SSR:** the request culture set by `UseRequestLocalization` (see below). Without request localization, the server process's OS culture applies.
+- **Blazor WebAssembly:** the browser language by default. To switch languages, set the culture before the app starts and reload the page, because satellite assemblies are loaded for the startup culture.
+- **Trimmed globalization:** with `<InvariantGlobalization>true</InvariantGlobalization>`, or with `<SatelliteResourceLanguages>` excluding `de`, the German texts are not available and the tables show English.
+
+Set the UI culture the usual ASP.NET Core way, for example with request localization:
 
 ```csharp
-private static readonly FancyTableTexts GermanTexts = FancyTableTexts.Default with
-{
-    SearchPlaceholder = "Suchen",
-    RowsPerPageLabel = "Zeilen pro Seite",
-    AllItemsLabel = "Alle",
-    HiddenColumnsLabel = "Ausgeblendete Spalten:",
-    PreviousPageLabel = "Zurueck",
-    NextPageLabel = "Weiter",
-    ExpandLabel = "Aufklappen",
-    CollapseLabel = "Zuklappen"
-};
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .SetDefaultCulture("en")
+    .AddSupportedCultures("en", "de")
+    .AddSupportedUICultures("en", "de"));
+```
+
+Column titles (`FancyColumn.Title`) and your own cell content are app content and are not translated by the library. Localize them in your app, for example with `IStringLocalizer`, and build the column definitions at render time when the language can change.
+
+`FancyTableTexts` members:
+
+- `Current` — texts for the current UI culture (cached per culture)
+- `ForCulture(CultureInfo culture)` — texts for a specific culture
+- `Default` — the fixed English texts, independent of the culture
+
+To override single texts and keep the rest localized, build the override at render time from `Current` (not in a `static` field, which would freeze the culture that was active at startup):
+
+```razor
+<FancyTable TItem="Person" Items="people" Columns="columns" Texts="PeopleTexts" />
+
+@code {
+    private FancyTableTexts PeopleTexts => FancyTableTexts.Current with
+    {
+        SearchPlaceholder = "Search people"
+    };
+}
 ```
 
 The column filter popup adds these keys (English defaults): `FilterColumnFormat` ("Filter column {0}"), `FilterValuePlaceholder`, `ApplyFilterLabel`, `ClearFilterLabel`, and one label per operator: `FilterOperatorEqualsLabel`, `FilterOperatorNotEqualsLabel`, `FilterOperatorContainsLabel`, `FilterOperatorNotContainsLabel`, `FilterOperatorStartsWithLabel`, `FilterOperatorEndsWithLabel`, `FilterOperatorIsEmptyLabel`, `FilterOperatorIsNotEmptyLabel`.
 
 Accessibility labels for the table header, search and filter popup use these keys (English defaults): `SortColumnFormat` ("Sort column {0}"), `HideColumnFormat` ("Hide column {0}"), `FilteredColumnLabel` ("filtered", read by screen readers on restore buttons of filtered hidden columns), `FilterOperatorLabel` ("Operator") and `ClearSearchLabel` ("Clear search"). The search input and search button reuse `SearchPlaceholder` as their accessible name.
-
-The package also includes `FancyTable.resx`, `FancyTable.en.resx`, and `FancyTable.de.resx` so the same string catalog is already available for a future resource-driven integration layer.
 
 ## Column Configuration
 

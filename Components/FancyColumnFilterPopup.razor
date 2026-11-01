@@ -80,7 +80,7 @@
     public FancyColumnFilter? ActiveFilter { get; set; }
 
     [Parameter, EditorRequired]
-    public FancyTableTexts Texts { get; set; } = FancyTableTexts.Default;
+    public FancyTableTexts Texts { get; set; } = FancyTableTexts.Current;
 
     [Parameter]
     public EventCallback<FancyColumnFilter> OnApply { get; set; }
