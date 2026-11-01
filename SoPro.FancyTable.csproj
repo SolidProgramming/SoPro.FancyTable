@@ -36,4 +36,12 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+    <EmbeddedResource Remove="tests/**" />
+    <InternalsVisibleTo Include="SoPro.FancyTable.Tests" />
+  </ItemGroup>
+
 </Project>
