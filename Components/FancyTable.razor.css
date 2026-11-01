@@ -7,6 +7,7 @@
     border: 1px solid var(--bs-border-color, #e0e0e0);
     border-radius: 6px;
     background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color);
 }
 
 .tree-table {

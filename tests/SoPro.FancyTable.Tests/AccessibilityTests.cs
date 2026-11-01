@@ -51,7 +51,7 @@ public sealed class AccessibilityTests : BunitContext
             .Add(p => p.InitialColumnFilters, initialFilters));
     }
 
-    private IRenderedComponent<FancyTreeTable<Node>> RenderTree(
+    private IRenderedComponent<FancyTreeTable<Node>> RenderTreeTable(
         FancyTableTexts? texts = null,
         IReadOnlyList<FancyColumnFilter>? initialFilters = null)
     {
@@ -144,27 +144,27 @@ public sealed class AccessibilityTests : BunitContext
     [Fact]
     public void Tree_SortButton_HasTypeLabelAndHiddenIcon()
     {
-        AssertButton(RenderTree().Find("th button[aria-label='Sort column Name']"), "Sort column Name");
+        AssertButton(RenderTreeTable().Find("th button[aria-label='Sort column Name']"), "Sort column Name");
     }
 
     [Fact]
-    public void Tree_AriaSort_FollowsSortState() => AssertAriaSort(RenderTree());
+    public void Tree_AriaSort_FollowsSortState() => AssertAriaSort(RenderTreeTable());
 
     [Fact]
     public void Tree_HideButton_HasTypeLabelAndHiddenIcon()
     {
-        AssertButton(RenderTree().Find("th button[aria-label='Hide column Name']"), "Hide column Name");
+        AssertButton(RenderTreeTable().Find("th button[aria-label='Hide column Name']"), "Hide column Name");
     }
 
     [Fact]
-    public void Tree_Search_HasLabels() => AssertSearchLabels(RenderTree());
+    public void Tree_Search_HasLabels() => AssertSearchLabels(RenderTreeTable());
 
     [Fact]
     public void Tree_RestoreButton_FilteredMarkerOnlyWhenFiltered() =>
-        AssertRestoreButton(RenderTree(), RenderTree(initialFilters: NameFilter));
+        AssertRestoreButton(RenderTreeTable(), RenderTreeTable(initialFilters: NameFilter));
 
     [Fact]
-    public void Tree_Labels_ComeFromTexts() => AssertCustomTexts(RenderTree(CustomTexts, NameFilter));
+    public void Tree_Labels_ComeFromTexts() => AssertCustomTexts(RenderTreeTable(CustomTexts, NameFilter));
 
     // Filter popup
 
