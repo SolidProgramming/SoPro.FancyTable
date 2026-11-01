@@ -25,6 +25,7 @@ public sealed class FancyTableTextsLocalizationTests
         Assert.Equal("Anwenden", texts.ApplyFilterLabel);
         Assert.Equal("Ist", texts.FilterOperatorEqualsLabel);
         Assert.Equal("Suchen", texts.SearchPlaceholder);
+        Assert.Equal("Zurück", texts.PreviousPageLabel);
     }
 
     [Fact]
