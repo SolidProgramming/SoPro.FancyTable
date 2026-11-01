@@ -622,7 +622,7 @@ Global expand/collapse actions always operate on the full tree, not just on the 
 
 ## Component Dependencies
 
-- **Bootstrap 5**: For styling and grid utilities (MIT License)
+- **Bootstrap 5.3+**: For styling, grid utilities and theme/dark mode support via `data-bs-theme` (MIT License). With Bootstrap 5.0-5.2 the tables work and keep the default light look through built-in colour fallbacks.
 - **Bootstrap Icons**: For UI icons (search, sort, eye, etc.) (MIT License)
 
 ## License

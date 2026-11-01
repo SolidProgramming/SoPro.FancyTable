@@ -4,9 +4,9 @@
     min-height: 0;
     overflow-x: auto;
     overflow-y: auto;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--bs-border-color, #e0e0e0);
     border-radius: 6px;
-    background: #fff;
+    background: var(--bs-body-bg, #fff);
 }
 
 .tree-table {
@@ -33,8 +33,8 @@
 }
 
 ::deep thead {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
+    border-bottom: 2px solid var(--bs-border-color, #dee2e6);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -44,7 +44,7 @@
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
-    color: #495057;
+    color: var(--bs-secondary-color, #495057);
     position: relative;
     transition: background-color 0.2s;
 }
@@ -62,7 +62,7 @@
     padding: 0;
     border: 0;
     background: transparent;
-    color: #6c757d;
+    color: var(--bs-secondary-color, #6c757d);
     cursor: grab;
     touch-action: none;
 }
@@ -96,7 +96,7 @@
 ::deep .fancy-column-resize-handle:hover::after,
 ::deep .fancy-column-resize-handle:focus-visible::after,
 ::deep .fancy-column-resize-handle.is-active::after {
-    background: #0d6efd;
+    background: var(--bs-primary, #0d6efd);
 }
 
 ::deep th.drop-before::before,
@@ -107,7 +107,7 @@
     bottom: 0;
     z-index: 3;
     width: 3px;
-    background: #0d6efd;
+    background: var(--bs-primary, #0d6efd);
 }
 
 ::deep th.drop-before::before {
@@ -119,7 +119,7 @@
 }
 
 ::deep th:hover {
-    background-color: #e9ecef;
+    background-color: var(--bs-secondary-bg, #e9ecef);
 }
 
 ::deep .col-title {
@@ -129,7 +129,7 @@
 ::deep tbody td {
     padding: 0.5rem 0.75rem;
     vertical-align: middle;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 
 ::deep .fancy-column-layout-enabled .fancy-cell-value,
