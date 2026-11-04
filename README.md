@@ -702,11 +702,11 @@ Bootstrap and Bootstrap Icons are also licensed under the MIT License.
 - [x] Pagination support with optional custom templates
 - [x] Localization support for default UI text
 - [x] Column resizing and reordering
+- [x] Per-column filtering
 - [ ] Export to CSV/Excel
 - [ ] Detail rows / expandable row content
 - [ ] Row click / activation API
 - [ ] Default sorting per column
-- [ ] Per-column filtering
 - [ ] Custom summary / action rows without full row override
 - [ ] Persistable UI state
 - [ ] Sticky header / scroll container options
