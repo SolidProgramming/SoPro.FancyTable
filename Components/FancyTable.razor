@@ -58,8 +58,13 @@
     }
 </div>
 
-<div class="tree-table-container">
-    <table class="@GetTableClass()" @ref="tableElement">
+@if (IsServerMode && serverLoader.IsLoading && LoadingTemplate is not null)
+{
+    <div class="fancy-table-loading-template">@LoadingTemplate</div>
+}
+
+<div class="@GetContainerClass()">
+    <table class="@GetTableClass()" @ref="tableElement" aria-busy="@GetAriaBusy()">
         <colgroup>
             @foreach (FancyColumn<TItem> column in VisibleColumns)
             {
@@ -193,7 +198,30 @@
                 }
             </div>
 
-            @if (pagedItems.Context.PageCount > 1)
+            @if (IsServerMode)
+            {
+                @if (pagedItems.Context.HasPreviousPage || pagedItems.Context.HasNextPage)
+                {
+                    <div class="btn-group btn-group-sm" role="group" aria-label="@ResolvedPaginationAriaLabel">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                disabled="@(!pagedItems.Context.HasPreviousPage)"
+                                @onclick="pagedItems.Context.GoToPreviousPage">
+                            @ResolvedPreviousPageLabel
+                        </button>
+                        <button type="button" class="btn btn-primary" aria-current="page" disabled>
+                            @pagedItems.Context.CurrentPage
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                disabled="@(!pagedItems.Context.HasNextPage)"
+                                @onclick="pagedItems.Context.GoToNextPage">
+                            @ResolvedNextPageLabel
+                        </button>
+                    </div>
+                }
+            }
+            else if (pagedItems.Context.PageCount > 1)
             {
                 <div class="btn-group btn-group-sm" role="group" aria-label="@ResolvedPaginationAriaLabel">
                     <button type="button"
@@ -225,8 +253,14 @@
 @code {
     private static readonly IReadOnlyList<int> DefaultPageSizeOptions = [10, 25, 50, 100];
 
-    [Parameter, EditorRequired]
-    public required IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+    [Parameter]
+    public IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    [Parameter]
+    public FancyItemsProvider<TItem>? ItemsProvider { get; set; }
+
+    [Parameter]
+    public RenderFragment? LoadingTemplate { get; set; }
 
     [Parameter, EditorRequired]
     public required IReadOnlyList<FancyColumn<TItem>> Columns { get; set; } = Array.Empty<FancyColumn<TItem>>();
@@ -335,6 +369,12 @@
     private int paginationCurrentPage = 1;
     private int paginationPageSize = 25;
     private bool paginationStateInitialized;
+    private readonly FancyServerDataLoader<TItem> serverLoader = new();
+    private IReadOnlyList<TItem> serverItems = Array.Empty<TItem>();
+    private bool serverHasMore;
+    private bool serverLoadStarted;
+
+    private bool IsServerMode => ItemsProvider is not null;
 
     private FancyTableTexts ResolvedTexts => Texts ?? FancyTableTexts.Current;
     private string ResolvedSearchPlaceholder => ResolvedTexts.SearchPlaceholder;
@@ -386,11 +426,87 @@
         }
     }
 
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        bool hasItems = parameters.TryGetValue(nameof(Items), out IReadOnlyList<TItem>? items) && items is not null;
+        bool hasProvider = parameters.TryGetValue(nameof(ItemsProvider), out FancyItemsProvider<TItem>? provider) && provider is not null;
+        if (hasItems && hasProvider)
+        {
+            throw new InvalidOperationException($"{nameof(FancyTable<TItem>)} accepts either {nameof(Items)} or {nameof(ItemsProvider)}, not both.");
+        }
+
+        return base.SetParametersAsync(parameters);
+    }
+
     protected override void OnParametersSet()
     {
         columnLayout.Synchronize(Columns, InitialColumnLayout, pinnedColumnKey: null);
         columnFilters.Synchronize(Columns, InitialColumnFilters);
         SyncPaginationStateFromParameters();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsServerMode && !serverLoadStarted)
+        {
+            serverLoadStarted = true;
+            await LoadServerPageAsync();
+        }
+    }
+
+    /// <summary>
+    /// Reloads the current page from the <see cref="ItemsProvider"/>, or the first page if requested.
+    /// Does nothing in client mode.
+    /// </summary>
+    public async Task RefreshDataAsync(bool resetToFirstPage = false)
+    {
+        if (resetToFirstPage)
+        {
+            await ResetToFirstPageAsync();
+        }
+
+        await LoadServerPageAsync();
+    }
+
+    private async Task LoadServerPageAsync(bool allowStepBack = true)
+    {
+        if (ItemsProvider is null)
+        {
+            return;
+        }
+
+        Task<FancyItemsResult<TItem>?> loadTask = serverLoader.LoadAsync(ItemsProvider, BuildServerRequest());
+        StateHasChanged();
+        FancyItemsResult<TItem>? result = await loadTask;
+        if (result is null)
+        {
+            return;
+        }
+
+        if (result.Items.Count == 0 && paginationCurrentPage > 1 && allowStepBack)
+        {
+            paginationCurrentPage--;
+            await CurrentPageChanged.InvokeAsync(paginationCurrentPage);
+            await LoadServerPageAsync(allowStepBack: false);
+            return;
+        }
+
+        serverItems = result.Items;
+        serverHasMore = result.HasMore;
+        StateHasChanged();
+    }
+
+    private FancyItemsRequest BuildServerRequest() =>
+        new(AppliedSearchText, SortColumnKey, SortAscending, columnFilters.GetFilters(), paginationCurrentPage,
+            IsPaginationActive ? PaginationPageSize : 0);
+
+    private async Task ResetToFirstPageAsync()
+    {
+        if (paginationCurrentPage != 1)
+        {
+            paginationCurrentPage = 1;
+            await CurrentPageChanged.InvokeAsync(1);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -414,6 +530,11 @@
 
     private PagedItemsResult GetPagedItems()
     {
+        if (IsServerMode)
+        {
+            return new PagedItemsResult { Items = serverItems, Context = BuildServerPaginationContext(serverItems.Count) };
+        }
+
         string filter = string.IsNullOrWhiteSpace(AppliedSearchText) ? SearchText : AppliedSearchText;
         IEnumerable<TItem> searchedItems = TableQueryHelpers.ApplySearch(Items, filter, Columns, SearchPredicate);
         IEnumerable<TItem> columnFilteredItems = TableQueryHelpers.ApplyColumnFilters(searchedItems, columnFilters.GetFilters(), Columns);
@@ -462,6 +583,27 @@
             setPageSizeAsync: SetPageSizeAsync);
     }
 
+    private FancyPaginationContext<TItem> BuildServerPaginationContext(int itemCount)
+    {
+        int pageSize = IsPaginationActive ? PaginationPageSize : itemCount;
+        int startItemIndex = itemCount == 0 ? 0 : ((paginationCurrentPage - 1) * pageSize) + 1;
+        int endItemIndex = itemCount == 0 ? 0 : startItemIndex + itemCount - 1;
+
+        return new FancyPaginationContext<TItem>(
+            currentPage: paginationCurrentPage,
+            pageSize: PaginationPageSize,
+            totalItemCount: itemCount,
+            filteredItemCount: itemCount,
+            pageCount: paginationCurrentPage + (serverHasMore ? 1 : 0),
+            startItemIndex: startItemIndex,
+            endItemIndex: endItemIndex,
+            goToPageAsync: SetCurrentPageAsync,
+            goToPreviousPageAsync: () => SetCurrentPageAsync(paginationCurrentPage - 1),
+            goToNextPageAsync: () => SetCurrentPageAsync(paginationCurrentPage + 1),
+            setPageSizeAsync: SetPageSizeAsync,
+            hasNextPage: serverHasMore);
+    }
+
     private IReadOnlyList<TItem> ApplyPagination(IReadOnlyList<TItem> items, FancyPaginationContext<TItem> paginationContext)
     {
         if (!IsPaginationActive)
@@ -473,7 +615,7 @@
         return items.Skip(skip).Take(PaginationPageSize).ToList();
     }
 
-    private void SortBy(string columnKey)
+    private async Task SortBy(string columnKey)
     {
         if (SortColumnKey == columnKey)
         {
@@ -483,6 +625,12 @@
         {
             SortColumnKey = columnKey;
             SortAscending = true;
+        }
+
+        if (IsServerMode)
+        {
+            await ResetToFirstPageAsync();
+            await LoadServerPageAsync();
         }
     }
 
@@ -532,6 +680,7 @@
         }
 
         await ColumnFiltersChanged.InvokeAsync(columnFilters.GetFilters());
+        await LoadServerPageAsync();
     }
 
     private void HideColumn(string key) => HiddenColumns.Add(key);
@@ -566,28 +715,26 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleSearchKeyPress(KeyboardEventArgs e)
+    private async Task HandleSearchKeyPress(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
             debounceTimer?.Dispose();
-            ApplySearch();
+            await ApplySearch();
         }
     }
 
-    private void ApplySearch()
+    private Task ApplySearch()
     {
         AppliedSearchText = SearchText;
-        paginationCurrentPage = 1;
-        StateHasChanged();
+        return OnSearchAppliedAsync();
     }
 
-    private void ClearSearch()
+    private Task ClearSearch()
     {
         SearchText = string.Empty;
         AppliedSearchText = string.Empty;
-        paginationCurrentPage = 1;
-        StateHasChanged();
+        return OnSearchAppliedAsync();
     }
 
     private void OnSearchInput(ChangeEventArgs e)
@@ -597,13 +744,20 @@
         debounceTimer?.Dispose();
         debounceTimer = new Timer(_ =>
         {
-            _ = InvokeAsync(() =>
-            {
-                AppliedSearchText = SearchText;
-                paginationCurrentPage = 1;
-                StateHasChanged();
-            });
+            _ = InvokeAsync(ApplySearch);
         }, null, 250, Timeout.Infinite);
+    }
+
+    private async Task OnSearchAppliedAsync()
+    {
+        paginationCurrentPage = 1;
+        if (IsServerMode)
+        {
+            await LoadServerPageAsync();
+            return;
+        }
+
+        StateHasChanged();
     }
 
     private void SyncPaginationStateFromParameters()
@@ -637,6 +791,7 @@
 
         paginationCurrentPage = normalizedPage;
         await CurrentPageChanged.InvokeAsync(normalizedPage);
+        await LoadServerPageAsync();
     }
 
     private async Task SetPageSizeAsync(int pageSize)
@@ -652,6 +807,7 @@
 
         await PageSizeChanged.InvokeAsync(normalizedPageSize);
         await CurrentPageChanged.InvokeAsync(paginationCurrentPage);
+        await LoadServerPageAsync();
     }
 
     private async Task OnPageSizeChanged(ChangeEventArgs e)
@@ -667,6 +823,13 @@
 
     private string GetDefaultPaginationSummary(FancyPaginationContext<TItem> context)
     {
+        if (IsServerMode)
+        {
+            return context.FilteredItemCount == 0
+                ? ResolvedTexts.NoRowsLabel
+                : FormatResolvedText(ResolvedTexts.ShowingPageItemsFormat, context.StartItemIndex, context.EndItemIndex);
+        }
+
         if (context.FilteredItemCount == 0)
         {
             return context.TotalItemCount == 0
@@ -697,6 +860,11 @@
 
     private string GetTableClass() => IsColumnLayoutEnabled ? "tree-table fancy-column-layout-enabled" : "tree-table";
 
+    private string GetContainerClass() =>
+        IsServerMode && serverLoader.IsLoading ? "tree-table-container fancy-table-loading" : "tree-table-container";
+
+    private string? GetAriaBusy() => IsServerMode ? (serverLoader.IsLoading ? "true" : "false") : null;
+
     private string GetToolbarContainerClass() => CombineClasses("d-flex ms-auto", ToolbarContainerClass);
 
     private string GetPageSizeContainerClass() => CombineClasses("fancy-page-size", PageSizeContainerClass);
@@ -720,6 +888,7 @@
     public async ValueTask DisposeAsync()
     {
         debounceTimer?.Dispose();
+        serverLoader.Dispose();
         if (columnModule is not null)
         {
             try
