@@ -48,6 +48,9 @@
   <data name="ShowingFilteredItemsFormat" xml:space="preserve">
     <value>Showing {0}-{1} of {2} filtered rows ({3} total)</value>
   </data>
+  <data name="ShowingPageItemsFormat" xml:space="preserve">
+    <value>Showing {0}-{1}</value>
+  </data>
   <data name="ExpandLabel" xml:space="preserve">
     <value>Expand</value>
   </data>

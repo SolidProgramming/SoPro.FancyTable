@@ -48,6 +48,9 @@
   <data name="ShowingFilteredItemsFormat" xml:space="preserve">
     <value>Zeige {0}-{1} von {2} gefilterten Zeilen ({3} insgesamt)</value>
   </data>
+  <data name="ShowingPageItemsFormat" xml:space="preserve">
+    <value>Zeige {0}-{1}</value>
+  </data>
   <data name="ExpandLabel" xml:space="preserve">
     <value>Aufklappen</value>
   </data>
