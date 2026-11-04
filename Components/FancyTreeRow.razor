@@ -139,9 +139,7 @@ else
             return FormattableString.Invariant($"width:{width:0.##}px;max-width:{width:0.##}px;");
         }
 
-        return column.MaxWidth is double maxWidth
-            ? FormattableString.Invariant($"max-width:{maxWidth:0.##}px;")
-            : null;
+        return column.GetWidthBoundsStyle();
     }
 
     private bool IsColumnConstrained(FancyColumn<TItem> column) =>

@@ -88,9 +88,7 @@ internal sealed class FancyColumnLayoutController<TItem>
             return FormattableString.Invariant($"width:{width:0.##}px;min-width:{width:0.##}px;max-width:{width:0.##}px;");
         }
 
-        return columns.TryGetValue(key, out FancyColumn<TItem>? column) && column.MaxWidth is double maxWidth
-            ? FormattableString.Invariant($"max-width:{maxWidth:0.##}px;")
-            : null;
+        return columns.TryGetValue(key, out FancyColumn<TItem>? column) ? column.GetWidthBoundsStyle() : null;
     }
 
     public void ApplyMeasuredWidths(IEnumerable<FancyColumnLayout> measurements)

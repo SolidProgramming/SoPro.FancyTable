@@ -29,4 +29,13 @@ public sealed class FancyColumn<TItem>
     public Func<TItem, string?>? SearchTextSelector { get; init; }
 
     public RenderFragment<TItem>? CellTemplate { get; init; }
+
+    // Inline min-width / max-width of a column without a fixed width; null if neither is set, so the browser sizes it (auto).
+    internal string? GetWidthBoundsStyle()
+    {
+        string minWidthStyle = MinWidth is double minWidth ? FormattableString.Invariant($"min-width:{minWidth:0.##}px;") : "";
+        string maxWidthStyle = MaxWidth is double maxWidth ? FormattableString.Invariant($"max-width:{maxWidth:0.##}px;") : "";
+        string style = minWidthStyle + maxWidthStyle;
+        return style.Length == 0 ? null : style;
+    }
 }
