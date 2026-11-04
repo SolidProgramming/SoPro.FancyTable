@@ -53,6 +53,7 @@ public sealed record FancyTableTexts
     public string NoMatchingRowsWithTotalFormat { get; init; } = "No matching rows ({0} total)";
     public string ShowingItemsFormat { get; init; } = "Showing {0}-{1} of {2}";
     public string ShowingFilteredItemsFormat { get; init; } = "Showing {0}-{1} of {2} filtered rows ({3} total)";
+    public string ShowingPageItemsFormat { get; init; } = "Showing {0}-{1}";
     public string ExpandLabel { get; init; } = "Expand";
     public string CollapseLabel { get; init; } = "Collapse";
     public string NoMatchingRootItemsFormat { get; init; } = "No matching rows ({0} total root items)";

@@ -6,6 +6,7 @@ public sealed class FancyPaginationContext<TItem>
     private readonly Func<Task> goToPreviousPageAsync;
     private readonly Func<Task> goToNextPageAsync;
     private readonly Func<int, Task> setPageSizeAsync;
+    private readonly bool? hasNextPage;
 
     public FancyPaginationContext(
         int currentPage,
@@ -18,8 +19,10 @@ public sealed class FancyPaginationContext<TItem>
         Func<int, Task> goToPageAsync,
         Func<Task> goToPreviousPageAsync,
         Func<Task> goToNextPageAsync,
-        Func<int, Task> setPageSizeAsync)
+        Func<int, Task> setPageSizeAsync,
+        bool? hasNextPage = null)
     {
+        this.hasNextPage = hasNextPage;
         CurrentPage = currentPage;
         PageSize = pageSize;
         TotalItemCount = totalItemCount;
@@ -42,7 +45,7 @@ public sealed class FancyPaginationContext<TItem>
     public int EndItemIndex { get; }
 
     public bool HasPreviousPage => CurrentPage > 1;
-    public bool HasNextPage => CurrentPage < PageCount;
+    public bool HasNextPage => hasNextPage ?? CurrentPage < PageCount;
 
     public Task GoToPage(int page) => goToPageAsync(page);
     public Task GoToPreviousPage() => goToPreviousPageAsync();

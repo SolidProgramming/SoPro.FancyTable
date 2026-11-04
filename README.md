@@ -62,6 +62,10 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Default footer pager with optional page-size selector
 - Custom pagination, summary, and page-size templates via `FancyPaginationContext<TItem>`
 
+### Server mode
+- Optional `ItemsProvider` for flat and tree tables: search, column filters, sorting and paging are executed by your data source (database, API) and only the current page is loaded
+- Outdated requests are cancelled, a loading state is shown while a page loads
+
 ### Localization
 - Built-in texts follow the UI culture (`CultureInfo.CurrentUICulture`); English and German are bundled
 - Centralized UI texts via `FancyTableTexts` (`Current`, `ForCulture`, fixed English `Default`)
@@ -92,7 +96,9 @@ https://www.nuget.org/packages/SoPro.FancyTable
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `Items` | `IReadOnlyList<TItem>` | The data items to display in the table (required) |
+| `Items` | `IReadOnlyList<TItem>` | The data items to display in the table (required unless `ItemsProvider` is set) |
+| `ItemsProvider` | `FancyItemsProvider<TItem>?` | Loads one page at a time (server mode); mutually exclusive with `Items`, see [Server Mode](#server-mode) |
+| `LoadingTemplate` | `RenderFragment?` | Rendered above the table while the `ItemsProvider` is loading |
 | `Columns` | `IReadOnlyList<FancyColumn<TItem>>` | Column configuration (required) |
 | `Texts` | `FancyTableTexts?` | Centralized overrides for built-in UI labels and summary text |
 | `ToolbarTemplate` | `RenderFragment?` | Custom toolbar content; replaces the default search bar |
@@ -641,6 +647,41 @@ Global expand/collapse actions always operate on the full tree, not just on the 
 - Clearing the search restores the manual expand/collapse state from before the search
 - Column filters apply together with search: a node is shown only if it matches the search and the filters itself, and its ancestors are kept as the path to it
 - Sorting keeps the tree structure intact by sorting only within each sibling group
+
+## Server Mode
+
+Set `ItemsProvider` instead of `Items` when the data is too large to load at once. The table then neither searches, filters, sorts nor pages locally; it passes the current state to your provider and shows exactly the items it returns.
+
+```razor
+<FancyTable TItem="Person"
+            ItemsProvider="LoadPeopleAsync"
+            Columns="columns"
+            PaginationEnabled="true"
+            PageSize="25"
+            ShowPageSizeSelector="true"
+            @ref="table" />
+
+@code {
+    private FancyTable<Person>? table;
+
+    private async ValueTask<FancyItemsResult<Person>> LoadPeopleAsync(FancyItemsRequest request, CancellationToken cancellationToken)
+    {
+        // request.SearchText, request.SortColumnKey, request.SortAscending,
+        // request.ColumnFilters, request.Page (1-based), request.PageSize (0 = all)
+        List<Person> page = await peopleService.QueryAsync(request, take: request.PageSize + 1, cancellationToken);
+        return new FancyItemsResult<Person>(page.Take(request.PageSize).ToList(), HasMore: page.Count > request.PageSize);
+    }
+
+    // after your own filters changed: await table!.RefreshDataAsync(resetToFirstPage: true);
+}
+```
+
+- The provider is called on first render, when the search is applied or cleared, on a sort click, when a column filter is applied or cleared, on a page change, a page size change and on `RefreshDataAsync()`. Every trigger except a page change starts again at page 1.
+- `RefreshDataAsync(bool resetToFirstPage = false)` reloads the current page, or page 1. If a page after the first comes back empty, the table steps back one page.
+- A running request is cancelled through its `CancellationToken` as soon as a newer one starts; the result of an outdated request is discarded. Any other exception of the provider is not caught.
+- There is no total count: the pager shows previous, the current page and next, and `HasMore` decides whether next is enabled. `FancyPaginationContext.HasNextPage` follows `HasMore`.
+- While loading, the table has `aria-busy="true"`, its container gets the class `fancy-table-loading` and `LoadingTemplate` is rendered.
+- `FancyTreeTable`: the provider returns the root items of the page; children still come from `ChildItemsSelector`, keep the order you deliver and are neither searched nor sorted locally. After a reload nodes are collapsed unless `InitiallyExpandedSelector` says otherwise.
 
 ## Component Dependencies
 
