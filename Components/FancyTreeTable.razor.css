@@ -157,7 +157,7 @@
 
 ::deep th:first-child,
 ::deep td:first-child {
-    min-width: 260px;
+    min-width: auto;
     white-space: nowrap;
 }
 

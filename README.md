@@ -265,7 +265,7 @@ Each column is configured using `FancyColumn<TItem>`:
 | `Resizable` | `bool` | Whether the column can be resized when resizing is enabled (default: `true`) |
 | `Reorderable` | `bool` | Whether the column can be reordered when reordering is enabled (default: `true`) |
 | `Width` | `double?` | Initial width in pixels; natural content width is used when omitted |
-| `MinWidth` | `double?` | Optional minimum resize width in pixels |
+| `MinWidth` | `double?` | Optional minimum display and resize width in pixels; without `Width`, `MinWidth` and `MaxWidth` the column has no minimum width (`auto`) |
 | `MaxWidth` | `double?` | Optional maximum automatic and resize width in pixels |
 | `HeaderClass` | `string?` | CSS class applied to the header cell |
 | `CellClass` | `string?` | CSS class applied to data cells |
