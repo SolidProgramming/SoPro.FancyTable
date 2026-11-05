@@ -856,7 +856,7 @@
         return Enumerable.Range(startPage, endPage - startPage + 1).ToList();
     }
 
-    private string GetTopBarClass() => CombineClasses("fancy-table-topbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2", TopBarClass);
+    private string GetTopBarClass() => CombineClasses("fancy-table-topbar", TopBarClass);
 
     private string GetTableClass() => IsColumnLayoutEnabled ? "tree-table fancy-column-layout-enabled" : "tree-table";
 
@@ -865,7 +865,7 @@
 
     private string? GetAriaBusy() => IsServerMode ? (serverLoader.IsLoading ? "true" : "false") : null;
 
-    private string GetToolbarContainerClass() => CombineClasses("d-flex ms-auto", ToolbarContainerClass);
+    private string GetToolbarContainerClass() => CombineClasses("fancy-toolbar", ToolbarContainerClass);
 
     private string GetPageSizeContainerClass() => CombineClasses("fancy-page-size", PageSizeContainerClass);
 

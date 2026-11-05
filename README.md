@@ -92,6 +92,23 @@ https://www.nuget.org/packages/SoPro.FancyTable
 - Header and cell styling via `HeaderClass` and `CellClass`
 - Wrapper layout classes for toolbar, tree actions, page size, and pagination containers
 
+#### Top bar layout
+
+The top bar (`.fancy-table-topbar`) holds the page-size selector (`.fancy-page-size`) and the toolbar (`.fancy-toolbar`). The default layout (flex row, wrapped, items spaced apart, toolbar pushed right) is set in the component CSS rather than as Bootstrap utility classes in the markup. Any utility class you pass via `TopBarClass`, `PageSizeContainerClass` or `ToolbarContainerClass` therefore overrides it, for example to put both side by side on the left:
+
+```razor
+<FancyTable TItem="Person"
+            Items="people"
+            Columns="columns"
+            PaginationEnabled="true"
+            ShowPageSizeSelector="true"
+            TopBarClass="justify-content-start"
+            PageSizeContainerClass="d-inline-flex"
+            ToolbarContainerClass="d-inline-flex ms-0 gap-2" />
+```
+
+To style them with your own CSS, target the classes from a parent with `::deep`, e.g. `.my-table ::deep .fancy-toolbar { ... }`.
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -119,9 +136,9 @@ https://www.nuget.org/packages/SoPro.FancyTable
 | `PaginationSummaryTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Custom summary content for the default footer |
 | `PaginationTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the visible footer pager area |
 | `PageSizeTemplate` | `RenderFragment<FancyPaginationContext<TItem>>?` | Replaces the page-size selector area above the table |
-| `TopBarClass` | `string?` | Additional CSS classes for the top bar wrapper |
-| `ToolbarContainerClass` | `string?` | Additional CSS classes for the toolbar/search container |
-| `PageSizeContainerClass` | `string?` | Additional CSS classes for the page-size wrapper |
+| `TopBarClass` | `string?` | Additional CSS classes for the top bar wrapper (`.fancy-table-topbar`); utility classes override the default layout |
+| `ToolbarContainerClass` | `string?` | Additional CSS classes for the toolbar/search container (`.fancy-toolbar`); utility classes override the default layout |
+| `PageSizeContainerClass` | `string?` | Additional CSS classes for the page-size wrapper (`.fancy-page-size`) |
 | `PaginationContainerClass` | `string?` | Additional CSS classes for the pagination footer wrapper |
 | `PaginationSummaryClass` | `string?` | Additional CSS classes for the pagination summary wrapper |
 | `EnableColumnResizing` | `bool` | Enables resize handles; disabled by default |
@@ -278,7 +295,7 @@ Each column is configured using `FancyColumn<TItem>`:
 
 ```razor
 <FancyTable TItem="PersonRow"
-            Items="People"
+            Items="people"
             Columns="PeopleColumns"
             EnableColumnResizing="true"
             EnableColumnReordering="true"
