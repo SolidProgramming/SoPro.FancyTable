@@ -17,12 +17,26 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+/* Layout defaults live here (not as Bootstrap utilities in the markup) so that
+   utility classes passed via TopBarClass / PageSizeContainerClass /
+   ToolbarContainerClass always win. */
 .fancy-table-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
     min-height: 2rem;
 }
 
 .fancy-page-size {
     flex: 0 0 auto;
+}
+
+.fancy-toolbar {
+    display: flex;
+    margin-left: auto;
 }
 
 .fancy-pagination {
