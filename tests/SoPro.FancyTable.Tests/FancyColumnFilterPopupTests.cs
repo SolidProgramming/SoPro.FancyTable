@@ -16,12 +16,14 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
     private IRenderedComponent<FancyColumnFilterPopup> RenderPopup(
         FancyColumnFilter? active = null,
         Action<FancyColumnFilter>? onApply = null,
-        Action? onClear = null)
+        Action? onClear = null,
+        IReadOnlyList<FancyColumnFilterOperator>? allowedOperators = null)
     {
         return Render<FancyColumnFilterPopup>(parameters => parameters
             .Add(p => p.ColumnKey, "name")
             .Add(p => p.ColumnTitle, "Name")
             .Add(p => p.ActiveFilter, active)
+            .Add(p => p.AllowedOperators, allowedOperators)
             .Add(p => p.Texts, FancyTableTexts.Default)
             .Add(p => p.OnApply, EventCallback.Factory.Create<FancyColumnFilter>(this, f => onApply?.Invoke(f)))
             .Add(p => p.OnClear, EventCallback.Factory.Create(this, () => onClear?.Invoke())));
@@ -30,6 +32,88 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
     private static void Open(IRenderedComponent<FancyColumnFilterPopup> cut)
     {
         cut.Find("button.fancy-filter-button").Click();
+    }
+
+    private static List<string?> OptionValues(IRenderedComponent<FancyColumnFilterPopup> cut)
+    {
+        return cut.FindAll("select option").Select(option => option.GetAttribute("value")).ToList();
+    }
+
+    [Fact]
+    public void Open_WithoutAllowedOperators_OffersAllOperators()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup();
+        Open(cut);
+
+        Assert.Equal(Enum.GetNames<FancyColumnFilterOperator>(), OptionValues(cut));
+    }
+
+    [Fact]
+    public void Open_WithEmptyAllowedOperators_OffersAllOperators()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(allowedOperators: []);
+        Open(cut);
+
+        Assert.Equal(Enum.GetNames<FancyColumnFilterOperator>(), OptionValues(cut));
+    }
+
+    [Fact]
+    public void Open_WithAllowedOperators_OffersOnlyThoseInGivenOrderWithoutDuplicates()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(allowedOperators:
+        [
+            FancyColumnFilterOperator.NotEquals,
+            FancyColumnFilterOperator.Equals,
+            FancyColumnFilterOperator.NotEquals,
+            (FancyColumnFilterOperator)99
+        ]);
+        Open(cut);
+
+        Assert.Equal(["NotEquals", "Equals"], OptionValues(cut));
+    }
+
+    [Fact]
+    public void Open_ContainsNotAllowed_PreselectsFirstAllowedOperator()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(allowedOperators: [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.NotEquals]);
+        Open(cut);
+
+        Assert.Equal("Equals", cut.Find("select").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Open_ContainsAllowed_PreselectsContains()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(allowedOperators: [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.Contains]);
+        Open(cut);
+
+        Assert.Equal("Contains", cut.Find("select").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Open_ActiveFilterOperatorNotAllowed_PreselectsDefaultOperator()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(
+            new FancyColumnFilter("name", FancyColumnFilterOperator.StartsWith, "An"),
+            allowedOperators: [FancyColumnFilterOperator.Equals]);
+        Open(cut);
+
+        Assert.Equal("Equals", cut.Find("select").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Apply_OperatorNotAllowed_IsNotRaised()
+    {
+        FancyColumnFilter? received = null;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(onApply: f => received = f, allowedOperators: [FancyColumnFilterOperator.Equals]);
+        Open(cut);
+
+        cut.Find("select").Change("StartsWith");
+        cut.Find("input").Input("An");
+
+        Assert.True(cut.Find("button.btn-primary").HasAttribute("disabled"));
+        cut.Find("input").KeyDown("Enter");
+        Assert.Null(received);
     }
 
     [Fact]

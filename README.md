@@ -36,6 +36,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 ### Column filters
 - Opt-in per column via `Filterable`; a funnel icon in the header opens a popup with an operator and a value
 - Eight case-insensitive text operators: `Equals`, `NotEquals`, `Contains`, `NotContains`, `StartsWith`, `EndsWith`, `IsEmpty`, `IsNotEmpty`
+- Per-column operator selection via `FilterOperators`, e.g. only `Equals` and `NotEquals` for an id column; filters with an operator the column does not offer are ignored
 - Filters combine with AND across columns and with the active search
 - Filtered text comes from `SearchTextSelector`, falling back to `ValueSelector`
 - `Equals` and `NotEquals` compare trimmed text; the other operators use the value as typed
@@ -279,6 +280,7 @@ Each column is configured using `FancyColumn<TItem>`:
 | `Searchable` | `bool` | Whether the column is included in search (default: `true`) |
 | `Hideable` | `bool` | Whether the column can be hidden by the user |
 | `Filterable` | `bool` | Whether the header shows a filter popup for this column (default: `false`) |
+| `FilterOperators` | `IReadOnlyList<FancyColumnFilterOperator>?` | Operators offered in the filter popup of this column, in the given order; `null` or empty offers all operators |
 | `Resizable` | `bool` | Whether the column can be resized when resizing is enabled (default: `true`) |
 | `Reorderable` | `bool` | Whether the column can be reordered when reordering is enabled (default: `true`) |
 | `Width` | `double?` | Initial width in pixels; natural content width is used when omitted |
@@ -350,6 +352,19 @@ Mark columns with `Filterable = true`. The host persists the filters; the compon
 
     private async Task SaveFiltersAsync(IReadOnlyList<FancyColumnFilter> filters) =>
         await JS.InvokeVoidAsync("localStorage.setItem", "people-filters", JsonSerializer.Serialize(filters));
+}
+```
+
+To restrict the operators of a column, list them in `FilterOperators`. The popup offers them in the given order and preselects `Contains` if it is offered, otherwise the first one. Initial or applied filters with an operator the column does not offer are ignored, which is useful in server mode when the backend cannot answer every operator for a column:
+
+```csharp
+new FancyColumn<PersonRow>
+{
+    Key = "id",
+    Title = "Id",
+    ValueSelector = p => p.Id,
+    Filterable = true,
+    FilterOperators = [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.NotEquals]
 }
 ```
 

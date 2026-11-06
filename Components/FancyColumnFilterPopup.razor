@@ -23,7 +23,7 @@
      @ref="popupElement">
     <div class="d-flex flex-column gap-2 p-2">
         <select class="form-select form-select-sm" aria-label="@Texts.FilterOperatorLabel" @bind="draftOperator">
-            @foreach (FancyColumnFilterOperator op in Operators)
+            @foreach (FancyColumnFilterOperator op in OfferedOperators)
             {
                 <option value="@op.ToString()">@GetOperatorLabel(op)</option>
             }
@@ -58,8 +58,6 @@
 </div>
 
 @code {
-    private static readonly FancyColumnFilterOperator[] Operators = Enum.GetValues<FancyColumnFilterOperator>();
-
     private readonly string popupId = $"fancy-filter-{Guid.NewGuid():N}";
     private ElementReference anchorElement;
     private ElementReference popupElement;
@@ -79,6 +77,12 @@
     [Parameter]
     public FancyColumnFilter? ActiveFilter { get; set; }
 
+    // Operators offered in the operator list; null or empty offers all operators.
+    [Parameter]
+    public IReadOnlyList<FancyColumnFilterOperator>? AllowedOperators { get; set; }
+
+    private IReadOnlyList<FancyColumnFilterOperator> OfferedOperators => FancyColumnFilterExtensions.ResolveOperators(AllowedOperators);
+
     [Parameter, EditorRequired]
     public FancyTableTexts Texts { get; set; } = FancyTableTexts.Current;
 
@@ -93,7 +97,7 @@
         draftOperator,
         draftOperator.RequiresValue() ? draftValue : null);
 
-    private bool CanApply => Draft.IsEffective();
+    private bool CanApply => Draft.IsEffective() && OfferedOperators.Contains(draftOperator);
 
     private void Open()
     {
@@ -104,7 +108,10 @@
             return;
         }
 
-        draftOperator = ActiveFilter?.Operator ?? FancyColumnFilterOperator.Contains;
+        IReadOnlyList<FancyColumnFilterOperator> offeredOperators = OfferedOperators;
+        draftOperator = ActiveFilter is not null && offeredOperators.Contains(ActiveFilter.Operator)
+            ? ActiveFilter.Operator
+            : offeredOperators.DefaultOperator();
         draftValue = ActiveFilter?.Value ?? string.Empty;
         isOpen = true;
         showPending = true;
