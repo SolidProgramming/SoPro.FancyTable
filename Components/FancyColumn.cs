@@ -12,6 +12,9 @@ public sealed class FancyColumn<TItem>
     public bool Reorderable { get; init; } = true;
     public bool Filterable { get; init; }
 
+    // Operators offered in the filter popup, in the given order; null or empty offers all operators.
+    public IReadOnlyList<FancyColumnFilterOperator>? FilterOperators { get; init; }
+
     public double? Width { get; init; }
     public double? MinWidth { get; init; }
     public double? MaxWidth { get; init; }

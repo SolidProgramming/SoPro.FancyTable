@@ -110,6 +110,7 @@
                                 <FancyColumnFilterPopup ColumnKey="@column.Key"
                                                         ColumnTitle="@column.Title"
                                                         ActiveFilter="columnFilters.Get(column.Key)"
+                                                        AllowedOperators="column.FilterOperators"
                                                         Texts="ResolvedTexts"
                                                         OnApply="ApplyColumnFilterAsync"
                                                         OnClear="() => ClearColumnFilterAsync(column.Key)" />

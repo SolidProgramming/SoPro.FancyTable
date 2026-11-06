@@ -55,6 +55,51 @@ public sealed class FancyTableFilterTests : BunitContext
         });
     }
 
+    [Fact]
+    public void FilterPopup_OffersOnlyTheOperatorsOfTheColumn()
+    {
+        List<FancyColumn<Person>> columns =
+        [
+            new FancyColumn<Person> { Key = "name", Title = "Name", ValueSelector = p => p.Name, Filterable = true },
+            new FancyColumn<Person>
+            {
+                Key = "id",
+                Title = "Id",
+                ValueSelector = p => p.Id,
+                Filterable = true,
+                FilterOperators = [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.NotEquals]
+            }
+        ];
+        IRenderedComponent<FancyTable<Person>> cut = RenderTable(columns);
+
+        cut.Find("th[data-column-key='id'] button.fancy-filter-button").Click();
+        cut.Find("th[data-column-key='name'] button.fancy-filter-button").Click();
+
+        Assert.Equal(["Equals", "NotEquals"], cut.FindAll("th[data-column-key='id'] select option").Select(o => o.GetAttribute("value")));
+        Assert.Equal(8, cut.FindAll("th[data-column-key='name'] select option").Count);
+    }
+
+    [Fact]
+    public void InitialFilter_WithOperatorNotOfferedByColumn_IsIgnored()
+    {
+        List<FancyColumn<Person>> columns =
+        [
+            new FancyColumn<Person>
+            {
+                Key = "id",
+                Title = "Id",
+                ValueSelector = p => p.Id,
+                Filterable = true,
+                FilterOperators = [FancyColumnFilterOperator.Equals]
+            }
+        ];
+
+        IRenderedComponent<FancyTable<Person>> cut = RenderTable(columns, [new FancyColumnFilter("id", FancyColumnFilterOperator.StartsWith, "1")]);
+
+        Assert.Equal(People.Count, cut.FindAll("tbody tr").Count);
+        Assert.NotNull(cut.Find("th[data-column-key='id'] i.bi-funnel"));
+    }
+
     private static void ApplyFilter(IRenderedComponent<FancyTable<Person>> cut, string key, string operatorName, string? value)
     {
         string th = $"th[data-column-key='{key}']";

@@ -93,6 +93,55 @@ public sealed class FancyColumnFilterStateTests
         Assert.Null(state.Get("city"));
     }
 
+    private static FancyColumn<Person> EqualsOnlyColumn(string key)
+    {
+        return new FancyColumn<Person>
+        {
+            Key = key,
+            Title = key,
+            ValueSelector = p => p.Name,
+            Filterable = true,
+            FilterOperators = [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.NotEquals]
+        };
+    }
+
+    [Fact]
+    public void Set_ReturnsFalseForOperatorNotOfferedByColumn()
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize([EqualsOnlyColumn("id")], null);
+
+        Assert.False(state.Set(new FancyColumnFilter("id", FancyColumnFilterOperator.Contains, "1")));
+        Assert.True(state.Set(new FancyColumnFilter("id", FancyColumnFilterOperator.NotEquals, "1")));
+        Assert.Equal([new FancyColumnFilter("id", FancyColumnFilterOperator.NotEquals, "1")], state.GetFilters());
+    }
+
+    [Fact]
+    public void Synchronize_DropsInitialFilterWithOperatorNotOfferedByColumn()
+    {
+        FancyColumnFilterState<Person> state = new();
+
+        state.Synchronize([EqualsOnlyColumn("id"), Column("name")],
+        [
+            new FancyColumnFilter("id", FancyColumnFilterOperator.StartsWith, "1"),
+            new FancyColumnFilter("name", FancyColumnFilterOperator.StartsWith, "a")
+        ]);
+
+        Assert.Equal([new FancyColumnFilter("name", FancyColumnFilterOperator.StartsWith, "a")], state.GetFilters());
+    }
+
+    [Fact]
+    public void Synchronize_DropsFilterWhenColumnNoLongerOffersItsOperator()
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize([Column("id")], null);
+        state.Set(new FancyColumnFilter("id", FancyColumnFilterOperator.Contains, "1"));
+
+        state.Synchronize([EqualsOnlyColumn("id")], null);
+
+        Assert.Empty(state.GetFilters());
+    }
+
     [Fact]
     public void Remove_ReturnsFalseWhenMissing()
     {
