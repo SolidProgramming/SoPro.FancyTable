@@ -113,4 +113,15 @@ internal static class FancyFilterValues
 
         return (decimal)number;
     }
+
+    // A float is converted directly, not widened to double first, so 0.1f becomes 0.1 rather than 0.100000001490116.
+    private static decimal? FromBinary(float number)
+    {
+        if (!float.IsFinite(number) || number <= (float)decimal.MinValue || number >= (float)decimal.MaxValue)
+        {
+            return null;
+        }
+
+        return (decimal)number;
+    }
 }

@@ -124,7 +124,7 @@ public sealed class TableQueryHelpersFilterTests
         Assert.Equal("Anna", result[0].Name);
     }
 
-    private sealed record Event(DateTime? At, DateOnly? Day, DateTimeOffset? Offset, int? Count, double? Ratio, string? AtText);
+    private sealed record Event(DateTime? At, DateOnly? Day, DateTimeOffset? Offset, int? Count, double? Ratio, string? AtText, float? Score = null);
 
     private static readonly IReadOnlyList<FancyColumn<Event>> EventColumns = new List<FancyColumn<Event>>
     {
@@ -133,6 +133,7 @@ public sealed class TableQueryHelpersFilterTests
         new FancyColumn<Event> { Key = "offset", Title = "Offset", ValueSelector = e => e.Offset, Filterable = true, FilterType = FancyColumnFilterType.Date },
         new FancyColumn<Event> { Key = "count", Title = "Count", ValueSelector = e => e.Count, Filterable = true, FilterType = FancyColumnFilterType.Number },
         new FancyColumn<Event> { Key = "ratio", Title = "Ratio", ValueSelector = e => e.Ratio, Filterable = true, FilterType = FancyColumnFilterType.Number },
+        new FancyColumn<Event> { Key = "score", Title = "Score", ValueSelector = e => e.Score, Filterable = true, FilterType = FancyColumnFilterType.Number },
         new FancyColumn<Event> { Key = "attext", Title = "AtText", ValueSelector = e => e.AtText, Filterable = true, FilterType = FancyColumnFilterType.Date }
     };
 
@@ -189,6 +190,15 @@ public sealed class TableQueryHelpersFilterTests
     public void NumberFilter_DoubleComparedAsDecimal()
     {
         Assert.True(MatchesEvent(SampleEvent with { Ratio = 0.1 }, new FancyColumnFilter("ratio", FancyColumnFilterOperator.Equals, "0.1")));
+    }
+
+    [Fact]
+    public void NumberFilter_FloatComparedAtItsOwnPrecision()
+    {
+        Event item = SampleEvent with { Score = 0.1f };
+
+        Assert.True(MatchesEvent(item, new FancyColumnFilter("score", FancyColumnFilterOperator.Equals, "0.1")));
+        Assert.True(MatchesEvent(item, new FancyColumnFilter("score", FancyColumnFilterOperator.LessThanOrEqual, "0.1")));
     }
 
     [Fact]
