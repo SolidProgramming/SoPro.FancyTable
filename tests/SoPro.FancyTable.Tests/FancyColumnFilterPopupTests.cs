@@ -17,13 +17,15 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
         FancyColumnFilter? active = null,
         Action<FancyColumnFilter>? onApply = null,
         Action? onClear = null,
-        IReadOnlyList<FancyColumnFilterOperator>? allowedOperators = null)
+        IReadOnlyList<FancyColumnFilterOperator>? allowedOperators = null,
+        FancyColumnFilterType filterType = FancyColumnFilterType.Text)
     {
         return Render<FancyColumnFilterPopup>(parameters => parameters
             .Add(p => p.ColumnKey, "name")
             .Add(p => p.ColumnTitle, "Name")
             .Add(p => p.ActiveFilter, active)
             .Add(p => p.AllowedOperators, allowedOperators)
+            .Add(p => p.FilterType, filterType)
             .Add(p => p.Texts, FancyTableTexts.Default)
             .Add(p => p.OnApply, EventCallback.Factory.Create<FancyColumnFilter>(this, f => onApply?.Invoke(f)))
             .Add(p => p.OnClear, EventCallback.Factory.Create(this, () => onClear?.Invoke())));
@@ -305,5 +307,127 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
         await cut.InvokeAsync(() => cut.Instance.OnPopoverClosed());
 
         Assert.Equal("false", cut.Find("button.fancy-filter-button").GetAttribute("aria-expanded"));
+    }
+
+    [Theory]
+    [InlineData(FancyColumnFilterType.Text, "text")]
+    [InlineData(FancyColumnFilterType.Date, "date")]
+    [InlineData(FancyColumnFilterType.Number, "number")]
+    public void ValueInput_TypeFollowsFilterType(FancyColumnFilterType filterType, string inputType)
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(filterType: filterType);
+        Open(cut);
+
+        Assert.Equal(inputType, cut.Find("input").GetAttribute("type"));
+    }
+
+    [Fact]
+    public void NumberInput_AllowsDecimals()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(filterType: FancyColumnFilterType.Number);
+        Open(cut);
+
+        Assert.Equal("any", cut.Find("input").GetAttribute("step"));
+    }
+
+    [Fact]
+    public void Open_DateColumn_OffersComparisonOperators()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(filterType: FancyColumnFilterType.Date);
+        Open(cut);
+
+        Assert.Equal(
+            FancyColumnFilterExtensions.OperatorsFor(FancyColumnFilterType.Date).Select(op => (string?)op.ToString()).ToList(),
+            OptionValues(cut));
+        Assert.Equal("Equals", cut.Find("select").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Open_DateColumn_LabelsComparisonOperators()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(filterType: FancyColumnFilterType.Date);
+        Open(cut);
+
+        List<string> labels = cut.FindAll("select option").Select(option => option.TextContent).ToList();
+        Assert.Contains("Is greater than", labels);
+        Assert.Contains("Is greater than or equal to", labels);
+        Assert.Contains("Is less than", labels);
+        Assert.Contains("Is less than or equal to", labels);
+        Assert.Contains("Is between", labels);
+    }
+
+    [Fact]
+    public void Between_RendersFromAndToInputs()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(filterType: FancyColumnFilterType.Date);
+        Open(cut);
+
+        cut.Find("select").Change("Between");
+
+        IReadOnlyList<AngleSharp.Dom.IElement> inputs = cut.FindAll("input");
+        Assert.Equal(["From", "To"], inputs.Select(input => input.GetAttribute("aria-label")));
+        Assert.All(inputs, input => Assert.Equal("date", input.GetAttribute("type")));
+    }
+
+    [Fact]
+    public void Between_ApplyDisabledUntilBothFilled()
+    {
+        FancyColumnFilter? received = null;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(onApply: f => received = f, filterType: FancyColumnFilterType.Date);
+        Open(cut);
+        cut.Find("select").Change("Between");
+
+        cut.Find("input[aria-label='From']").Input("2026-01-01");
+        Assert.True(cut.Find("button.btn-primary").HasAttribute("disabled"));
+
+        cut.Find("input[aria-label='To']").Input("2026-02-01");
+        Assert.False(cut.Find("button.btn-primary").HasAttribute("disabled"));
+
+        cut.Find("button.btn-primary").Click();
+        Assert.Equal(new FancyColumnFilter("name", FancyColumnFilterOperator.Between, "2026-01-01", "2026-02-01"), received);
+    }
+
+    [Fact]
+    public void Between_EnterInToInput_Applies()
+    {
+        int calls = 0;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(onApply: _ => calls++, filterType: FancyColumnFilterType.Number);
+        Open(cut);
+        cut.Find("select").Change("Between");
+        cut.Find("input[aria-label='From']").Input("1");
+        cut.Find("input[aria-label='To']").Input("5");
+
+        cut.Find("input[aria-label='To']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public void Open_ActiveBetween_PrefillsBothInputs()
+    {
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(
+            new FancyColumnFilter("name", FancyColumnFilterOperator.Between, "2026-01-01", "2026-02-01"),
+            filterType: FancyColumnFilterType.Date);
+        Open(cut);
+
+        Assert.Equal("2026-01-01", cut.Find("input[aria-label='From']").GetAttribute("value"));
+        Assert.Equal("2026-02-01", cut.Find("input[aria-label='To']").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void SwitchFromBetweenToGreaterThan_KeepsFromDropsTo()
+    {
+        FancyColumnFilter? received = null;
+        IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(onApply: f => received = f, filterType: FancyColumnFilterType.Date);
+        Open(cut);
+        cut.Find("select").Change("Between");
+        cut.Find("input[aria-label='From']").Input("2026-01-01");
+        cut.Find("input[aria-label='To']").Input("2026-02-01");
+
+        cut.Find("select").Change("GreaterThan");
+        Assert.Equal("2026-01-01", cut.Find("input").GetAttribute("value"));
+        cut.Find("button.btn-primary").Click();
+
+        Assert.Equal(new FancyColumnFilter("name", FancyColumnFilterOperator.GreaterThan, "2026-01-01"), received);
     }
 }
