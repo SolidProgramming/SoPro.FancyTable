@@ -165,4 +165,114 @@ public sealed class FancyColumnFilterStateTests
 
         Assert.Equal(["name", "city"], state.GetFilters().Select(f => f.Key));
     }
+
+    private static FancyColumn<Person> TypedColumn(string key, FancyColumnFilterType type, IReadOnlyList<FancyColumnFilterOperator>? operators = null)
+    {
+        return new FancyColumn<Person>
+        {
+            Key = key,
+            Title = key,
+            ValueSelector = p => p.Name,
+            Filterable = true,
+            FilterType = type,
+            FilterOperators = operators
+        };
+    }
+
+    private static FancyColumnFilterState<Person> TypedState(IReadOnlyList<FancyColumnFilter>? initial = null)
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize([TypedColumn("d", FancyColumnFilterType.Date), TypedColumn("n", FancyColumnFilterType.Number)], initial);
+        return state;
+    }
+
+    [Fact]
+    public void Set_ContainsOnDateColumn_Rejected()
+    {
+        Assert.False(TypedState().Set(new FancyColumnFilter("d", FancyColumnFilterOperator.Contains, "2026")));
+    }
+
+    [Fact]
+    public void Set_DateColumn_ValidIsoValue_Accepted()
+    {
+        FancyColumnFilterState<Person> state = TypedState();
+        FancyColumnFilter filter = new("d", FancyColumnFilterOperator.GreaterThan, "2026-11-01");
+
+        Assert.True(state.Set(filter));
+        Assert.Equal([filter], state.GetFilters());
+    }
+
+    [Fact]
+    public void Set_ValueToDroppedExceptForBetween()
+    {
+        FancyColumnFilterState<Person> state = TypedState();
+
+        state.Set(new FancyColumnFilter("d", FancyColumnFilterOperator.Equals, "2026-11-01", "2026-12-01"));
+        state.Set(new FancyColumnFilter("n", FancyColumnFilterOperator.Between, "1", "5"));
+
+        Assert.Equal(
+            [
+                new FancyColumnFilter("d", FancyColumnFilterOperator.Equals, "2026-11-01"),
+                new FancyColumnFilter("n", FancyColumnFilterOperator.Between, "1", "5")
+            ],
+            state.GetFilters());
+    }
+
+    [Fact]
+    public void Set_BetweenMissingSecondValue_Rejected()
+    {
+        Assert.False(TypedState().Set(new FancyColumnFilter("n", FancyColumnFilterOperator.Between, "1")));
+    }
+
+    [Fact]
+    public void Set_BetweenInvalidSecondValue_Rejected()
+    {
+        Assert.False(TypedState().Set(new FancyColumnFilter("d", FancyColumnFilterOperator.Between, "2026-01-01", "soon")));
+    }
+
+    [Fact]
+    public void Synchronize_CultureFormattedValues_Rejected()
+    {
+        FancyColumnFilterState<Person> state = TypedState(
+        [
+            new FancyColumnFilter("n", FancyColumnFilterOperator.Equals, "1,5"),
+            new FancyColumnFilter("d", FancyColumnFilterOperator.Equals, "01.11.2026")
+        ]);
+
+        Assert.Empty(state.GetFilters());
+    }
+
+    [Fact]
+    public void Synchronize_FilterTypeChanged_DropsFilterWithInvalidOperator()
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize([TypedColumn("x", FancyColumnFilterType.Text)], [new FancyColumnFilter("x", FancyColumnFilterOperator.Contains, "a")]);
+
+        state.Synchronize([TypedColumn("x", FancyColumnFilterType.Date)], null);
+
+        Assert.Empty(state.GetFilters());
+    }
+
+    [Fact]
+    public void Synchronize_FilterTypeChanged_DropsFilterWithInvalidValue()
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize([TypedColumn("x", FancyColumnFilterType.Text)], [new FancyColumnFilter("x", FancyColumnFilterOperator.Equals, "abc")]);
+
+        state.Synchronize([TypedColumn("x", FancyColumnFilterType.Number)], null);
+
+        Assert.Empty(state.GetFilters());
+    }
+
+    [Fact]
+    public void Synchronize_FilterOperatorsIntersectedWithType()
+    {
+        FancyColumnFilterState<Person> state = new();
+        state.Synchronize(
+            [TypedColumn("d", FancyColumnFilterType.Date, [FancyColumnFilterOperator.Contains, FancyColumnFilterOperator.GreaterThan])],
+            null);
+
+        Assert.True(state.Set(new FancyColumnFilter("d", FancyColumnFilterOperator.GreaterThan, "2026-11-01")));
+        Assert.False(state.Set(new FancyColumnFilter("d", FancyColumnFilterOperator.Contains, "2026")));
+    }
 }
