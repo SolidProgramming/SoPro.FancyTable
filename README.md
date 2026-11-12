@@ -61,7 +61,7 @@ https://www.nuget.org/packages/SoPro.FancyTable
 ### Pagination
 - Optional local/client-side pagination for flat and tree tables
 - Bindable `CurrentPage` and `PageSize` state
-- Default footer pager with optional page-size selector
+- Default footer pager with optional page-size selector; it shows five pages around the current one and always the first and last page, with `…` for left out pages (e.g. `1 … 48 49 50 51 52 … 100`)
 - Custom pagination, summary, and page-size templates via `FancyPaginationContext<TItem>`
 
 ### Server mode
@@ -735,7 +735,8 @@ Set `ItemsProvider` instead of `Items` when the data is too large to load at onc
 - The provider is called on first render, when the search is applied or cleared, on a sort click, when a column filter is applied or cleared, on a page change, a page size change and on `RefreshDataAsync()`. Every trigger except a page change starts again at page 1.
 - `RefreshDataAsync(bool resetToFirstPage = false)` reloads the current page, or page 1. If a page after the first comes back empty, the table steps back one page.
 - A running request is cancelled through its `CancellationToken` as soon as a newer one starts; the result of an outdated request is discarded. Any other exception of the provider is not caught.
-- There is no total count: the pager shows previous, the current page and next, and `HasMore` decides whether next is enabled. `FancyPaginationContext.HasNextPage` follows `HasMore`.
+- Without a total count the pager shows previous, the current page and next, and `HasMore` decides whether next is enabled. `FancyPaginationContext.HasNextPage` follows `HasMore`.
+- If the data source can count the matching items, set `TotalCount` on the result: `new FancyItemsResult<Person>(items, hasMore) { TotalCount = total }`. The pager then shows the page numbers and the summary "Showing x-y of total" like in client mode, and next is enabled up to the last page of the total (`HasMore` is ignored). `FancyPaginationContext.TotalItemCount`, `FilteredItemCount` and `PageCount` follow the total. Negative values count as no total. The provider is called on every page change, so cache the count while search and filters stay the same if counting is expensive.
 - While loading, the table has `aria-busy="true"`, its container gets the class `fancy-table-loading` and `LoadingTemplate` is rendered.
 - `FancyTreeTable`: the provider returns the root items of the page; children still come from `ChildItemsSelector`, keep the order you deliver and are neither searched nor sorted locally. After a reload nodes are collapsed unless `InitiallyExpandedSelector` says otherwise.
 
