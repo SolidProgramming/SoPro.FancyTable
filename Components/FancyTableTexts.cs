@@ -77,4 +77,11 @@ public sealed record FancyTableTexts
     public string FilterOperatorEndsWithLabel { get; init; } = "Ends with";
     public string FilterOperatorIsEmptyLabel { get; init; } = "Is empty";
     public string FilterOperatorIsNotEmptyLabel { get; init; } = "Is not empty";
+    public string FilterOperatorGreaterThanLabel { get; init; } = "Is greater than";
+    public string FilterOperatorGreaterThanOrEqualLabel { get; init; } = "Is greater than or equal to";
+    public string FilterOperatorLessThanLabel { get; init; } = "Is less than";
+    public string FilterOperatorLessThanOrEqualLabel { get; init; } = "Is less than or equal to";
+    public string FilterOperatorBetweenLabel { get; init; } = "Is between";
+    public string FilterValueFromLabel { get; init; } = "From";
+    public string FilterValueToLabel { get; init; } = "To";
 }

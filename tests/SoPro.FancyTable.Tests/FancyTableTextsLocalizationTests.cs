@@ -29,6 +29,20 @@ public sealed class FancyTableTextsLocalizationTests
     }
 
     [Fact]
+    public void ForCulture_German_ReturnsComparisonTexts()
+    {
+        FancyTableTexts texts = FancyTableTexts.ForCulture(German);
+
+        Assert.Equal("Ist größer als", texts.FilterOperatorGreaterThanLabel);
+        Assert.Equal("Ist größer oder gleich", texts.FilterOperatorGreaterThanOrEqualLabel);
+        Assert.Equal("Ist kleiner als", texts.FilterOperatorLessThanLabel);
+        Assert.Equal("Ist kleiner oder gleich", texts.FilterOperatorLessThanOrEqualLabel);
+        Assert.Equal("Ist zwischen", texts.FilterOperatorBetweenLabel);
+        Assert.Equal("Von", texts.FilterValueFromLabel);
+        Assert.Equal("Bis", texts.FilterValueToLabel);
+    }
+
+    [Fact]
     public void ForCulture_UnsupportedCulture_FallsBackToEnglish()
     {
         FancyTableTexts texts = FancyTableTexts.ForCulture(new CultureInfo("fr"));

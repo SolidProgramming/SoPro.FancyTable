@@ -105,6 +105,27 @@
   <data name="FilterOperatorIsNotEmptyLabel" xml:space="preserve">
     <value>Is not empty</value>
   </data>
+  <data name="FilterOperatorGreaterThanLabel" xml:space="preserve">
+    <value>Is greater than</value>
+  </data>
+  <data name="FilterOperatorGreaterThanOrEqualLabel" xml:space="preserve">
+    <value>Is greater than or equal to</value>
+  </data>
+  <data name="FilterOperatorLessThanLabel" xml:space="preserve">
+    <value>Is less than</value>
+  </data>
+  <data name="FilterOperatorLessThanOrEqualLabel" xml:space="preserve">
+    <value>Is less than or equal to</value>
+  </data>
+  <data name="FilterOperatorBetweenLabel" xml:space="preserve">
+    <value>Is between</value>
+  </data>
+  <data name="FilterValueFromLabel" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="FilterValueToLabel" xml:space="preserve">
+    <value>To</value>
+  </data>
   <data name="SortColumnFormat" xml:space="preserve">
     <value>Sort column {0}</value>
   </data>
