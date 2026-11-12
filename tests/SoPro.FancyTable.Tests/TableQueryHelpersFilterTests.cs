@@ -7,6 +7,11 @@ public sealed class TableQueryHelpersFilterTests
         Assert.Equal(1, (int)FancyColumnFilterOperator.NotEquals);
         Assert.Equal(6, (int)FancyColumnFilterOperator.IsEmpty);
         Assert.Equal(7, (int)FancyColumnFilterOperator.IsNotEmpty);
+        Assert.Equal(8, (int)FancyColumnFilterOperator.GreaterThan);
+        Assert.Equal(9, (int)FancyColumnFilterOperator.GreaterThanOrEqual);
+        Assert.Equal(10, (int)FancyColumnFilterOperator.LessThan);
+        Assert.Equal(11, (int)FancyColumnFilterOperator.LessThanOrEqual);
+        Assert.Equal(12, (int)FancyColumnFilterOperator.Between);
     }
 
     private sealed record Person(string? Name, string? City);

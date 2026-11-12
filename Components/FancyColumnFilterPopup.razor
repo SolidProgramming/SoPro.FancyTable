@@ -81,7 +81,7 @@
     [Parameter]
     public IReadOnlyList<FancyColumnFilterOperator>? AllowedOperators { get; set; }
 
-    private IReadOnlyList<FancyColumnFilterOperator> OfferedOperators => FancyColumnFilterExtensions.ResolveOperators(AllowedOperators);
+    private IReadOnlyList<FancyColumnFilterOperator> OfferedOperators => FancyColumnFilterExtensions.ResolveOperators(AllowedOperators, FancyColumnFilterType.Text);
 
     [Parameter, EditorRequired]
     public FancyTableTexts Texts { get; set; } = FancyTableTexts.Current;

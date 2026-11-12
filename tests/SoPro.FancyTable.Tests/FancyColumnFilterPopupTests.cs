@@ -34,27 +34,30 @@ public sealed class FancyColumnFilterPopupTests : BunitContext
         cut.Find("button.fancy-filter-button").Click();
     }
 
+    private static List<string?> TextOperatorNames =>
+        FancyColumnFilterExtensions.OperatorsFor(FancyColumnFilterType.Text).Select(op => (string?)op.ToString()).ToList();
+
     private static List<string?> OptionValues(IRenderedComponent<FancyColumnFilterPopup> cut)
     {
         return cut.FindAll("select option").Select(option => option.GetAttribute("value")).ToList();
     }
 
     [Fact]
-    public void Open_WithoutAllowedOperators_OffersAllOperators()
+    public void Open_WithoutAllowedOperators_OffersAllTextOperators()
     {
         IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup();
         Open(cut);
 
-        Assert.Equal(Enum.GetNames<FancyColumnFilterOperator>(), OptionValues(cut));
+        Assert.Equal(TextOperatorNames, OptionValues(cut));
     }
 
     [Fact]
-    public void Open_WithEmptyAllowedOperators_OffersAllOperators()
+    public void Open_WithEmptyAllowedOperators_OffersAllTextOperators()
     {
         IRenderedComponent<FancyColumnFilterPopup> cut = RenderPopup(allowedOperators: []);
         Open(cut);
 
-        Assert.Equal(Enum.GetNames<FancyColumnFilterOperator>(), OptionValues(cut));
+        Assert.Equal(TextOperatorNames, OptionValues(cut));
     }
 
     [Fact]

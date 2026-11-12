@@ -15,6 +15,9 @@ public sealed class FancyColumn<TItem>
     // Operators offered in the filter popup, in the given order; null or empty offers all operators.
     public IReadOnlyList<FancyColumnFilterOperator>? FilterOperators { get; init; }
 
+    // Kind of values the filter compares: Text (default), Date or Number; selects the filter input and operators.
+    public FancyColumnFilterType FilterType { get; init; } = FancyColumnFilterType.Text;
+
     public double? Width { get; init; }
     public double? MinWidth { get; init; }
     public double? MaxWidth { get; init; }

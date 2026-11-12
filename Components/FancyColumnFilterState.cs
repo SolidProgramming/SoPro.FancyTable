@@ -15,7 +15,7 @@ internal sealed class FancyColumnFilterState<TItem>
         operatorsByFilterableKey = new(StringComparer.Ordinal);
         foreach (FancyColumn<TItem> column in columns.Where(column => column.Filterable))
         {
-            operatorsByFilterableKey.TryAdd(column.Key, FancyColumnFilterExtensions.ResolveOperators(column.FilterOperators));
+            operatorsByFilterableKey.TryAdd(column.Key, FancyColumnFilterExtensions.ResolveOperators(column.FilterOperators, FancyColumnFilterType.Text));
         }
 
         if (!initialApplied)
