@@ -236,4 +236,24 @@ public sealed class FancyTableFilterTests : BunitContext
         Assert.Single(cut.FindAll("button:has(i.bi-eye) i.bi-funnel-fill"));
         Assert.Equal(10, RowCount(cut));
     }
+
+    private sealed record Birthday(string Name, DateOnly Born);
+
+    [Fact]
+    public void DateColumn_InitialGreaterThanFilter_ShowsOnlyLaterRows()
+    {
+        List<Birthday> items = [new("Old", new DateOnly(1990, 5, 1)), new("New", new DateOnly(2005, 3, 2)), new("Newer", new DateOnly(2010, 7, 3))];
+        IRenderedComponent<FancyTable<Birthday>> cut = Render<FancyTable<Birthday>>(parameters => parameters
+            .Add(p => p.Items, items)
+            .Add(p => p.Columns,
+            [
+                new FancyColumn<Birthday> { Key = "name", Title = "Name", ValueSelector = b => b.Name },
+                new FancyColumn<Birthday> { Key = "born", Title = "Born", ValueSelector = b => b.Born, Filterable = true, FilterType = FancyColumnFilterType.Date }
+            ])
+            .Add(p => p.InitialColumnFilters, [new FancyColumnFilter("born", FancyColumnFilterOperator.GreaterThan, "2000-01-01")]));
+
+        List<string> rows = cut.FindAll("tbody tr").Select(row => row.TextContent).ToList();
+        Assert.Equal(2, rows.Count);
+        Assert.DoesNotContain(rows, row => row.Contains("Old"));
+    }
 }

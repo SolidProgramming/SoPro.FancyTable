@@ -23,11 +23,14 @@ public sealed class FancyTableServerModeTests : BunitContext
     private static FancyItemsResult<string> Page(FancyItemsRequest request, bool hasMore = true) =>
         new([$"row {request.Page}a", $"row {request.Page}b"], hasMore);
 
-    private IRenderedComponent<FancyTable<string>> RenderServerTable(FakeItemsProvider<string> provider, RenderFragment? loadingTemplate = null)
+    private IRenderedComponent<FancyTable<string>> RenderServerTable(
+        FakeItemsProvider<string> provider,
+        RenderFragment? loadingTemplate = null,
+        List<FancyColumn<string>>? columns = null)
     {
         return Render<FancyTable<string>>(parameters => parameters
             .Add(p => p.ItemsProvider, provider.LoadAsync)
-            .Add(p => p.Columns, Columns())
+            .Add(p => p.Columns, columns ?? Columns())
             .Add(p => p.PaginationEnabled, true)
             .Add(p => p.PageSize, PageSize)
             .Add(p => p.ShowPageSizeSelector, true)
@@ -218,5 +221,24 @@ public sealed class FancyTableServerModeTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".test-loading")));
         Assert.Equal("false", cut.Find("table").GetAttribute("aria-busy"));
+    }
+
+    [Fact]
+    public void BetweenFilter_ReachesProviderWithValueTo()
+    {
+        FakeItemsProvider<string> provider = new(r => Page(r));
+        List<FancyColumn<string>> columns =
+        [
+            new FancyColumn<string> { Key = "n", Title = "Length", ValueSelector = s => s.Length, Filterable = true, FilterType = FancyColumnFilterType.Number }
+        ];
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider, columns: columns);
+
+        cut.Find("th[data-column-key='n'] button.fancy-filter-button").Click();
+        cut.Find("th[data-column-key='n'] select").Change(nameof(FancyColumnFilterOperator.Between));
+        cut.Find("th[data-column-key='n'] input[aria-label='From']").Input("1");
+        cut.Find("th[data-column-key='n'] input[aria-label='To']").Input("5");
+        cut.Find("th[data-column-key='n'] button.btn-primary").Click();
+
+        Assert.Equal(new FancyColumnFilter("n", FancyColumnFilterOperator.Between, "1", "5"), Assert.Single(provider.LastRequest.ColumnFilters));
     }
 }
