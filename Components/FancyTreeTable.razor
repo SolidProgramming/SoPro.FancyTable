@@ -210,7 +210,7 @@
                 }
             </div>
 
-            @if (IsServerMode)
+            @if (IsServerMode && serverTotalCount is null)
             {
                 @if (pagedNodes.Context.HasPreviousPage || pagedNodes.Context.HasNextPage)
                 {
@@ -242,13 +242,21 @@
                             @onclick="pagedNodes.Context.GoToPreviousPage">
                         @ResolvedPreviousPageLabel
                     </button>
-                    @foreach (int pageNumber in GetVisiblePageNumbers(pagedNodes.Context))
+                    @foreach (int? pagerPage in FancyPagerPages.Get(pagedNodes.Context.CurrentPage, pagedNodes.Context.PageCount))
                     {
-                        <button type="button"
-                                class="btn @(pageNumber == pagedNodes.Context.CurrentPage ? "btn-primary" : "btn-outline-secondary")"
-                                @onclick="() => pagedNodes.Context.GoToPage(pageNumber)">
-                            @pageNumber
-                        </button>
+                        @if (pagerPage is int pageNumber)
+                        {
+                            <button type="button"
+                                    class="btn @(pageNumber == pagedNodes.Context.CurrentPage ? "btn-primary" : "btn-outline-secondary")"
+                                    aria-current="@(pageNumber == pagedNodes.Context.CurrentPage ? "page" : null)"
+                                    @onclick="() => pagedNodes.Context.GoToPage(pageNumber)">
+                                @pageNumber
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="btn btn-outline-secondary disabled fancy-pagination-gap" aria-hidden="true">&hellip;</span>
+                        }
                     }
                     <button type="button"
                             class="btn btn-outline-secondary"
@@ -401,6 +409,7 @@
     private readonly FancyServerDataLoader<TItem> serverLoader = new();
     private IReadOnlyList<TItem> serverItems = Array.Empty<TItem>();
     private bool serverHasMore;
+    private int? serverTotalCount;
     private bool serverLoadStarted;
 
     private bool IsServerMode => ItemsProvider is not null;
@@ -523,6 +532,7 @@
 
         serverItems = result.Items;
         serverHasMore = result.HasMore;
+        serverTotalCount = result.TotalCount is >= 0 ? result.TotalCount : null;
         RebuildTree();
         StateHasChanged();
     }
@@ -545,20 +555,37 @@
         int pageSize = IsPaginationActive ? PaginationPageSize : rootItemCount;
         int startItemIndex = rootItemCount == 0 ? 0 : ((paginationCurrentPage - 1) * pageSize) + 1;
         int endItemIndex = rootItemCount == 0 ? 0 : startItemIndex + rootItemCount - 1;
+        int matchingItemCount = serverTotalCount ?? rootItemCount;
 
         return new FancyPaginationContext<TItem>(
             currentPage: paginationCurrentPage,
             pageSize: PaginationPageSize,
-            totalItemCount: rootItemCount,
-            filteredItemCount: rootItemCount,
-            pageCount: paginationCurrentPage + (serverHasMore ? 1 : 0),
+            totalItemCount: matchingItemCount,
+            filteredItemCount: matchingItemCount,
+            pageCount: GetServerPageCount(),
             startItemIndex: startItemIndex,
             endItemIndex: endItemIndex,
             goToPageAsync: SetCurrentPageAsync,
             goToPreviousPageAsync: () => SetCurrentPageAsync(paginationCurrentPage - 1),
             goToNextPageAsync: () => SetCurrentPageAsync(paginationCurrentPage + 1),
             setPageSizeAsync: SetPageSizeAsync,
-            hasNextPage: serverHasMore);
+            hasNextPage: serverTotalCount is null ? serverHasMore : null);
+    }
+
+    /// <summary>
+    /// Without a total count only the current page and, if the provider reports more, the next one are known.
+    /// With a total count the pages follow from it like in client mode.
+    /// </summary>
+    private int GetServerPageCount()
+    {
+        if (serverTotalCount is not int totalCount)
+        {
+            return paginationCurrentPage + (serverHasMore ? 1 : 0);
+        }
+
+        return !IsPaginationActive || totalCount == 0
+            ? 1
+            : Math.Max(1, (int)Math.Ceiling(totalCount / (double)PaginationPageSize));
     }
 
     protected override void OnParametersSet()
@@ -1150,9 +1177,14 @@
     {
         if (IsServerMode)
         {
-            return context.FilteredItemCount == 0
-                ? ResolvedTexts.NoRowsLabel
-                : FormatResolvedText(ResolvedTexts.ShowingPageItemsFormat, context.StartItemIndex, context.EndItemIndex);
+            if (context.FilteredItemCount == 0)
+            {
+                return ResolvedTexts.NoRowsLabel;
+            }
+
+            return serverTotalCount is null
+                ? FormatResolvedText(ResolvedTexts.ShowingPageItemsFormat, context.StartItemIndex, context.EndItemIndex)
+                : FormatResolvedText(ResolvedTexts.ShowingItemsFormat, context.StartItemIndex, context.EndItemIndex, context.FilteredItemCount);
         }
 
         if (context.FilteredItemCount == 0)
@@ -1165,20 +1197,6 @@
         return context.FilteredItemCount == context.TotalItemCount
             ? FormatResolvedText(ResolvedTexts.ShowingItemsFormat, context.StartItemIndex, context.EndItemIndex, context.FilteredItemCount)
             : FormatResolvedText(ResolvedTexts.ShowingVisibleRowsFormat, context.StartItemIndex, context.EndItemIndex, context.FilteredItemCount);
-    }
-
-    private IReadOnlyList<int> GetVisiblePageNumbers(FancyPaginationContext<TItem> context)
-    {
-        const int windowSize = 5;
-        int startPage = Math.Max(1, context.CurrentPage - 2);
-        int endPage = Math.Min(context.PageCount, startPage + windowSize - 1);
-
-        if ((endPage - startPage) < windowSize - 1)
-        {
-            startPage = Math.Max(1, endPage - windowSize + 1);
-        }
-
-        return Enumerable.Range(startPage, endPage - startPage + 1).ToList();
     }
 
     private string GetTopBarClass() => CombineClasses("fancy-table-topbar", TopBarClass);

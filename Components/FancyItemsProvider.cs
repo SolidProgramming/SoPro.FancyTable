@@ -17,4 +17,12 @@ public sealed record FancyItemsRequest(
 /// <summary>
 /// One page of items returned by a <see cref="FancyItemsProvider{TItem}"/> and whether a next page exists.
 /// </summary>
-public sealed record FancyItemsResult<TItem>(IReadOnlyList<TItem> Items, bool HasMore);
+public sealed record FancyItemsResult<TItem>(IReadOnlyList<TItem> Items, bool HasMore)
+{
+    /// <summary>
+    /// Number of items matching the request over all pages, or <c>null</c> if the data source does not count them.
+    /// When set, the pager shows the page numbers and the summary the total like in client mode, and the next page
+    /// follows from the total instead of <see cref="HasMore"/>. Negative values count as <c>null</c>.
+    /// </summary>
+    public int? TotalCount { get; init; }
+}

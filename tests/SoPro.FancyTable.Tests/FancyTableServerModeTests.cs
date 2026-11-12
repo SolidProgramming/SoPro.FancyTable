@@ -241,4 +241,66 @@ public sealed class FancyTableServerModeTests : BunitContext
 
         Assert.Equal(new FancyColumnFilter("n", FancyColumnFilterOperator.Between, "1", "5"), Assert.Single(provider.LastRequest.ColumnFilters));
     }
+
+    private static IReadOnlyList<string> PageButtons(IRenderedComponent<FancyTable<string>> cut) =>
+        cut.FindAll(".fancy-pagination .btn-group button").Select(button => button.TextContent.Trim())
+            .Where(text => int.TryParse(text, out _)).ToList();
+
+    [Fact]
+    public void TotalCount_ShowsPageNumbersAndTotalLikeClientMode()
+    {
+        FakeItemsProvider<string> provider = new(r => Page(r) with { TotalCount = 35 });
+
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider);
+
+        Assert.Equal(["1", "2", "3", "4"], PageButtons(cut));
+        Assert.Contains("Showing 1-2 of 35", cut.Find(".fancy-pagination-summary").TextContent);
+    }
+
+    [Fact]
+    public void TotalCount_PageButton_CallsProviderWithThatPage()
+    {
+        FakeItemsProvider<string> provider = new(r => Page(r) with { TotalCount = 35 });
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider);
+
+        cut.FindAll(".fancy-pagination .btn-group button").Single(button => button.TextContent.Trim() == "3").Click();
+
+        Assert.Equal(3, provider.LastRequest.Page);
+        Assert.Contains("Showing 21-22 of 35", cut.Find(".fancy-pagination-summary").TextContent);
+    }
+
+    [Fact]
+    public void TotalCount_NextPageFollowsTotal_NotHasMore()
+    {
+        FakeItemsProvider<string> provider = new(r => Page(r, hasMore: true) with { TotalCount = 20 });
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider);
+
+        cut.Find("button:contains('Next')").Click();
+
+        Assert.Equal(2, provider.LastRequest.Page);
+        Assert.True(cut.Find("button:contains('Next')").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void TotalCount_Zero_ShowsNoRowsAndNoPager()
+    {
+        FakeItemsProvider<string> provider = new(_ => new FancyItemsResult<string>([], false) { TotalCount = 0 });
+
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider);
+
+        Assert.Contains("No rows", cut.Find(".fancy-pagination-summary").TextContent);
+        Assert.Empty(cut.FindAll(".fancy-pagination .btn-group"));
+    }
+
+    [Fact]
+    public void TotalCount_Negative_KeepsPreviousNextPager()
+    {
+        FakeItemsProvider<string> provider = new(r => Page(r) with { TotalCount = -1 });
+
+        IRenderedComponent<FancyTable<string>> cut = RenderServerTable(provider);
+
+        Assert.Equal(["1"], PageButtons(cut));
+        Assert.Contains("Showing 1-2", cut.Find(".fancy-pagination-summary").TextContent);
+        Assert.DoesNotContain(" of ", cut.Find(".fancy-pagination-summary").TextContent);
+    }
 }
