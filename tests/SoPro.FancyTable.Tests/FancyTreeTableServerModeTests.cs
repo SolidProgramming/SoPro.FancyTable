@@ -240,4 +240,81 @@ public sealed class FancyTreeTableServerModeTests : BunitContext
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".test-loading")));
         Assert.Equal("false", cut.Find("table").GetAttribute("aria-busy"));
     }
+
+    private static IReadOnlyList<string> PageButtons(IRenderedComponent<FancyTreeTable<Node>> cut) =>
+        cut.FindAll(".fancy-pagination .btn-group button").Select(button => button.TextContent.Trim())
+            .Where(text => int.TryParse(text, out _)).ToList();
+
+    [Fact]
+    public void TotalCount_ShowsPageNumbersAndTotalLikeClientMode()
+    {
+        FakeItemsProvider<Node> provider = new(r => Page(r) with { TotalCount = 35 });
+
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        Assert.Equal(["1", "2", "3", "4"], PageButtons(cut));
+        Assert.Contains("Showing 1-2 of 35", cut.Find(".fancy-pagination-summary").TextContent);
+    }
+
+    [Fact]
+    public void TotalCount_PageButton_CallsProviderWithThatPage()
+    {
+        FakeItemsProvider<Node> provider = new(r => Page(r) with { TotalCount = 35 });
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        cut.FindAll(".fancy-pagination .btn-group button").Single(button => button.TextContent.Trim() == "3").Click();
+
+        Assert.Equal(3, provider.LastRequest.Page);
+        Assert.Contains("Showing 21-22 of 35", cut.Find(".fancy-pagination-summary").TextContent);
+    }
+
+    [Fact]
+    public void TotalCount_NextPageFollowsTotal_NotHasMore()
+    {
+        FakeItemsProvider<Node> provider = new(r => Page(r, hasMore: true) with { TotalCount = 20 });
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        cut.Find("button:contains('Next')").Click();
+
+        Assert.Equal(2, provider.LastRequest.Page);
+        Assert.True(cut.Find("button:contains('Next')").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void TotalCount_Zero_ShowsNoRowsAndNoPager()
+    {
+        FakeItemsProvider<Node> provider = new(_ => new FancyItemsResult<Node>([], false) { TotalCount = 0 });
+
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        Assert.Contains("No rows", cut.Find(".fancy-pagination-summary").TextContent);
+        Assert.Empty(cut.FindAll(".fancy-pagination .btn-group"));
+    }
+
+    [Fact]
+    public void TotalCount_Negative_KeepsPreviousNextPager()
+    {
+        FakeItemsProvider<Node> provider = new(r => Page(r) with { TotalCount = -1 });
+
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        Assert.Equal(["1"], PageButtons(cut));
+        Assert.Contains("Showing 1-2", cut.Find(".fancy-pagination-summary").TextContent);
+        Assert.DoesNotContain(" of ", cut.Find(".fancy-pagination-summary").TextContent);
+    }
+
+    [Fact]
+    public void TotalCount_ManyPages_ShowsFirstAndLastPageWithGaps()
+    {
+        FakeItemsProvider<Node> provider = new(r => Page(r) with { TotalCount = 1000 });
+        IRenderedComponent<FancyTreeTable<Node>> cut = RenderServerTree(provider);
+
+        cut.FindAll(".fancy-pagination .btn-group button").Single(button => button.TextContent.Trim() == "100").Click();
+        cut.FindAll(".fancy-pagination .btn-group button").Single(button => button.TextContent.Trim() == "1").Click();
+        cut.FindAll(".fancy-pagination .btn-group button").Single(button => button.TextContent.Trim() == "5").Click();
+
+        Assert.Equal(5, provider.LastRequest.Page);
+        Assert.Equal(["1", "3", "4", "5", "6", "7", "100"], PageButtons(cut));
+        Assert.Equal(2, cut.FindAll(".fancy-pagination .fancy-pagination-gap").Count);
+    }
 }
