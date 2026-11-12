@@ -36,9 +36,10 @@ https://www.nuget.org/packages/SoPro.FancyTable
 ### Column filters
 - Opt-in per column via `Filterable`; a funnel icon in the header opens a popup with an operator and a value
 - Eight case-insensitive text operators: `Equals`, `NotEquals`, `Contains`, `NotContains`, `StartsWith`, `EndsWith`, `IsEmpty`, `IsNotEmpty`
+- Date and number columns via `FilterType`: a native date picker (`<input type="date">`) or number input, and the operators `Equals`, `NotEquals`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `Between` (two inputs, both bounds inclusive), `IsEmpty`, `IsNotEmpty`
 - Per-column operator selection via `FilterOperators`, e.g. only `Equals` and `NotEquals` for an id column; filters with an operator the column does not offer are ignored
 - Filters combine with AND across columns and with the active search
-- Filtered text comes from `SearchTextSelector`, falling back to `ValueSelector`
+- Filtered text comes from `SearchTextSelector`, falling back to `ValueSelector`; date and number columns compare the `ValueSelector` value itself
 - `Equals` and `NotEquals` compare trimmed text; the other operators use the value as typed
 - `IsEmpty` and `IsNotEmpty` take no value
 - Filters apply explicitly (Apply button or Enter); Esc or a click outside discards the draft
@@ -264,7 +265,7 @@ To override single texts and keep the rest localized, build the override at rend
 }
 ```
 
-The column filter popup adds these keys (English defaults): `FilterColumnFormat` ("Filter column {0}"), `FilterValuePlaceholder`, `ApplyFilterLabel`, `ClearFilterLabel`, and one label per operator: `FilterOperatorEqualsLabel`, `FilterOperatorNotEqualsLabel`, `FilterOperatorContainsLabel`, `FilterOperatorNotContainsLabel`, `FilterOperatorStartsWithLabel`, `FilterOperatorEndsWithLabel`, `FilterOperatorIsEmptyLabel`, `FilterOperatorIsNotEmptyLabel`.
+The column filter popup adds these keys (English defaults): `FilterColumnFormat` ("Filter column {0}"), `FilterValuePlaceholder`, `ApplyFilterLabel`, `ClearFilterLabel`, and one label per operator: `FilterOperatorEqualsLabel`, `FilterOperatorNotEqualsLabel`, `FilterOperatorContainsLabel`, `FilterOperatorNotContainsLabel`, `FilterOperatorStartsWithLabel`, `FilterOperatorEndsWithLabel`, `FilterOperatorIsEmptyLabel`, `FilterOperatorIsNotEmptyLabel`, `FilterOperatorGreaterThanLabel`, `FilterOperatorGreaterThanOrEqualLabel`, `FilterOperatorLessThanLabel`, `FilterOperatorLessThanOrEqualLabel`, `FilterOperatorBetweenLabel`, and `FilterValueFromLabel` / `FilterValueToLabel` ("From" / "To", the accessible names of the two `Between` inputs).
 
 Accessibility labels for the table header, search and filter popup use these keys (English defaults): `SortColumnFormat` ("Sort column {0}"), `HideColumnFormat` ("Hide column {0}"), `FilteredColumnLabel` ("filtered", read by screen readers on restore buttons of filtered hidden columns), `FilterOperatorLabel` ("Operator") and `ClearSearchLabel` ("Clear search"). The search input and search button reuse `SearchPlaceholder` as their accessible name.
 
@@ -280,7 +281,8 @@ Each column is configured using `FancyColumn<TItem>`:
 | `Searchable` | `bool` | Whether the column is included in search (default: `true`) |
 | `Hideable` | `bool` | Whether the column can be hidden by the user |
 | `Filterable` | `bool` | Whether the header shows a filter popup for this column (default: `false`) |
-| `FilterOperators` | `IReadOnlyList<FancyColumnFilterOperator>?` | Operators offered in the filter popup of this column, in the given order; `null` or empty offers all operators |
+| `FilterOperators` | `IReadOnlyList<FancyColumnFilterOperator>?` | Operators offered in the filter popup of this column, in the given order; operators not valid for `FilterType` are dropped; `null` or empty offers all operators of the `FilterType` |
+| `FilterType` | `FancyColumnFilterType` | `Text` (default), `Date` or `Number`; selects the filter input and the offered operators |
 | `Resizable` | `bool` | Whether the column can be resized when resizing is enabled (default: `true`) |
 | `Reorderable` | `bool` | Whether the column can be reordered when reordering is enabled (default: `true`) |
 | `Width` | `double?` | Initial width in pixels; natural content width is used when omitted |
@@ -367,6 +369,28 @@ new FancyColumn<PersonRow>
     FilterOperators = [FancyColumnFilterOperator.Equals, FancyColumnFilterOperator.NotEquals]
 }
 ```
+
+### Date and number filters
+
+Set `FilterType` to get a date picker or a number input and comparison operators instead of the text operators. The column's `ValueSelector` must return the value itself, not formatted text:
+
+```csharp
+new FancyColumn<PersonRow>
+{
+    Key = "born",
+    Title = "Born",
+    ValueSelector = p => p.Born,          // DateTime, DateTimeOffset or DateOnly (nullable is fine)
+    Filterable = true,
+    FilterType = FancyColumnFilterType.Date
+}
+```
+
+- `Date` accepts `DateTime`, `DateTimeOffset` and `DateOnly` values and compares the day only; the time is ignored, and a `DateTimeOffset` keeps its own date.
+- `Number` accepts all built-in numeric types and compares them as `decimal`; `NaN`, infinities and values outside the `decimal` range count as empty.
+- `null` and values of other types count as empty: they match `IsEmpty` and `NotEquals` and nothing else.
+- `Between` uses `FancyColumnFilter.ValueTo` as its second value (both bounds inclusive, swapped if given in reverse order); for every other operator `ValueTo` is `null`.
+- Filter values are culture-invariant strings: `yyyy-MM-dd` for dates and `.` as the decimal separator for numbers (what the browser inputs produce). Initial or applied filters with a value in another format are ignored. Server-mode providers receive these strings in `request.ColumnFilters` and can parse them with `CultureInfo.InvariantCulture`.
+- How the date picker looks and how the date is displayed in the input depend on the browser and its language.
 
 `InitialColumnFilters` is read once, on the table's first render, so load persisted filters before rendering the table. `localStorage` is only available after the first render (it is not during prerendering), which is why the example renders the table once `filtersLoaded` is set.
 
@@ -699,7 +723,7 @@ Set `ItemsProvider` instead of `Items` when the data is too large to load at onc
     private async ValueTask<FancyItemsResult<Person>> LoadPeopleAsync(FancyItemsRequest request, CancellationToken cancellationToken)
     {
         // request.SearchText, request.SortColumnKey, request.SortAscending,
-        // request.ColumnFilters, request.Page (1-based), request.PageSize (0 = all)
+        // request.ColumnFilters (Value/ValueTo as invariant strings), request.Page (1-based), request.PageSize (0 = all)
         List<Person> page = await peopleService.QueryAsync(request, take: request.PageSize + 1, cancellationToken);
         return new FancyItemsResult<Person>(page.Take(request.PageSize).ToList(), HasMore: page.Count > request.PageSize);
     }

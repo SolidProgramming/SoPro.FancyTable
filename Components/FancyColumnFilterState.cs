@@ -2,7 +2,7 @@ internal sealed class FancyColumnFilterState<TItem>
 {
     private readonly Dictionary<string, FancyColumnFilter> filters = new(StringComparer.Ordinal);
     private List<string> columnOrder = [];
-    private Dictionary<string, IReadOnlyList<FancyColumnFilterOperator>> operatorsByFilterableKey = new(StringComparer.Ordinal);
+    private Dictionary<string, FilterableColumn> filterableColumnsByKey = new(StringComparer.Ordinal);
     private bool initialApplied;
 
     public bool HasActiveFilters => filters.Count > 0;
@@ -12,10 +12,12 @@ internal sealed class FancyColumnFilterState<TItem>
         IReadOnlyList<FancyColumnFilter>? initialFilters)
     {
         columnOrder = columns.Select(column => column.Key).Distinct(StringComparer.Ordinal).ToList();
-        operatorsByFilterableKey = new(StringComparer.Ordinal);
+        filterableColumnsByKey = new(StringComparer.Ordinal);
         foreach (FancyColumn<TItem> column in columns.Where(column => column.Filterable))
         {
-            operatorsByFilterableKey.TryAdd(column.Key, FancyColumnFilterExtensions.ResolveOperators(column.FilterOperators));
+            filterableColumnsByKey.TryAdd(
+                column.Key,
+                new FilterableColumn(column.FilterType, FancyColumnFilterExtensions.ResolveOperators(column.FilterOperators, column.FilterType)));
         }
 
         if (!initialApplied)
@@ -62,11 +64,19 @@ internal sealed class FancyColumnFilterState<TItem>
     public IReadOnlyList<FancyColumnFilter> GetFilters() =>
         columnOrder.Where(filters.ContainsKey).Select(key => filters[key]).ToList();
 
-    // A filter is allowed if its column is filterable and offers its operator.
+    // A filter is allowed if its column is filterable, offers its operator and can read its values.
     private bool IsAllowed(FancyColumnFilter filter) =>
-        operatorsByFilterableKey.TryGetValue(filter.Key, out IReadOnlyList<FancyColumnFilterOperator>? operators)
-        && operators.Contains(filter.Operator);
+        filterableColumnsByKey.TryGetValue(filter.Key, out FilterableColumn? column)
+        && column.Operators.Contains(filter.Operator)
+        && (!filter.Operator.RequiresValue() || FancyFilterValues.IsValidValue(column.Type, filter.Value))
+        && (!filter.Operator.RequiresSecondValue() || FancyFilterValues.IsValidValue(column.Type, filter.ValueTo));
 
-    private static FancyColumnFilter Normalize(FancyColumnFilter filter) =>
-        filter.Operator.RequiresValue() || filter.Value is null ? filter : filter with { Value = null };
+    // Drops the values the operator does not use: Value for IsEmpty/IsNotEmpty, ValueTo for everything but Between.
+    private static FancyColumnFilter Normalize(FancyColumnFilter filter) => filter with
+    {
+        Value = filter.Operator.RequiresValue() ? filter.Value : null,
+        ValueTo = filter.Operator.RequiresSecondValue() ? filter.ValueTo : null
+    };
+
+    private sealed record FilterableColumn(FancyColumnFilterType Type, IReadOnlyList<FancyColumnFilterOperator> Operators);
 }

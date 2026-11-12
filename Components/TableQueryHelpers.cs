@@ -78,7 +78,11 @@ internal static class TableQueryHelpers
             if (column is null || !column.Filterable)
                 continue;
 
-            if (!MatchesFilter(GetColumnText(column, item), filter))
+            bool matches = column.FilterType == FancyColumnFilterType.Text
+                ? MatchesFilter(GetColumnText(column, item), filter)
+                : FancyFilterValues.Matches(column.FilterType, column.ValueSelector?.Invoke(item), filter);
+
+            if (!matches)
                 return false;
         }
 

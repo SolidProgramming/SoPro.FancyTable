@@ -29,11 +29,31 @@
             }
         </select>
 
-        @if (draftOperator.RequiresValue())
+        @if (draftOperator.RequiresSecondValue())
         {
-            <input type="text"
+            <input type="@InputType"
+                   step="@InputStep"
                    class="form-control form-control-sm"
-                   placeholder="@Texts.FilterValuePlaceholder"
+                   placeholder="@GetPlaceholder(Texts.FilterValueFromLabel)"
+                   aria-label="@Texts.FilterValueFromLabel"
+                   value="@draftValue"
+                   @oninput="OnValueInput"
+                   @onkeydown="OnValueKeyDown" />
+            <input type="@InputType"
+                   step="@InputStep"
+                   class="form-control form-control-sm"
+                   placeholder="@GetPlaceholder(Texts.FilterValueToLabel)"
+                   aria-label="@Texts.FilterValueToLabel"
+                   value="@draftValueTo"
+                   @oninput="OnValueToInput"
+                   @onkeydown="OnValueKeyDown" />
+        }
+        else if (draftOperator.RequiresValue())
+        {
+            <input type="@InputType"
+                   step="@InputStep"
+                   class="form-control form-control-sm"
+                   placeholder="@GetPlaceholder(Texts.FilterValuePlaceholder)"
                    aria-label="@Texts.FilterValuePlaceholder"
                    value="@draftValue"
                    @oninput="OnValueInput"
@@ -65,6 +85,7 @@
     private DotNetObjectReference<FancyColumnFilterPopup>? dotNetReference;
     private FancyColumnFilterOperator draftOperator = FancyColumnFilterOperator.Contains;
     private string draftValue = string.Empty;
+    private string draftValueTo = string.Empty;
     private bool isOpen;
     private bool showPending;
 
@@ -77,11 +98,27 @@
     [Parameter]
     public FancyColumnFilter? ActiveFilter { get; set; }
 
-    // Operators offered in the operator list; null or empty offers all operators.
+    // Operators offered in the operator list; null or empty offers all operators of the filter type.
     [Parameter]
     public IReadOnlyList<FancyColumnFilterOperator>? AllowedOperators { get; set; }
 
-    private IReadOnlyList<FancyColumnFilterOperator> OfferedOperators => FancyColumnFilterExtensions.ResolveOperators(AllowedOperators);
+    // Kind of values the column holds; selects the value input and the operators.
+    [Parameter]
+    public FancyColumnFilterType FilterType { get; set; }
+
+    private IReadOnlyList<FancyColumnFilterOperator> OfferedOperators => FancyColumnFilterExtensions.ResolveOperators(AllowedOperators, FilterType);
+
+    private string InputType => FilterType switch
+    {
+        FancyColumnFilterType.Date => "date",
+        FancyColumnFilterType.Number => "number",
+        _ => "text"
+    };
+
+    private string? InputStep => FilterType == FancyColumnFilterType.Number ? "any" : null;
+
+    // Browsers ignore placeholders on date inputs, so none is rendered there.
+    private string? GetPlaceholder(string text) => FilterType == FancyColumnFilterType.Date ? null : text;
 
     [Parameter, EditorRequired]
     public FancyTableTexts Texts { get; set; } = FancyTableTexts.Current;
@@ -95,7 +132,8 @@
     private FancyColumnFilter Draft => new(
         ColumnKey,
         draftOperator,
-        draftOperator.RequiresValue() ? draftValue : null);
+        draftOperator.RequiresValue() ? draftValue : null,
+        draftOperator.RequiresSecondValue() ? draftValueTo : null);
 
     private bool CanApply => Draft.IsEffective() && OfferedOperators.Contains(draftOperator);
 
@@ -113,6 +151,7 @@
             ? ActiveFilter.Operator
             : offeredOperators.DefaultOperator();
         draftValue = ActiveFilter?.Value ?? string.Empty;
+        draftValueTo = ActiveFilter?.ValueTo ?? string.Empty;
         isOpen = true;
         showPending = true;
     }
@@ -133,6 +172,11 @@
     private void OnValueInput(ChangeEventArgs args)
     {
         draftValue = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnValueToInput(ChangeEventArgs args)
+    {
+        draftValueTo = args.Value?.ToString() ?? string.Empty;
     }
 
     private async Task OnValueKeyDown(KeyboardEventArgs args)
@@ -186,6 +230,11 @@
         FancyColumnFilterOperator.EndsWith => Texts.FilterOperatorEndsWithLabel,
         FancyColumnFilterOperator.IsEmpty => Texts.FilterOperatorIsEmptyLabel,
         FancyColumnFilterOperator.IsNotEmpty => Texts.FilterOperatorIsNotEmptyLabel,
+        FancyColumnFilterOperator.GreaterThan => Texts.FilterOperatorGreaterThanLabel,
+        FancyColumnFilterOperator.GreaterThanOrEqual => Texts.FilterOperatorGreaterThanOrEqualLabel,
+        FancyColumnFilterOperator.LessThan => Texts.FilterOperatorLessThanLabel,
+        FancyColumnFilterOperator.LessThanOrEqual => Texts.FilterOperatorLessThanOrEqualLabel,
+        FancyColumnFilterOperator.Between => Texts.FilterOperatorBetweenLabel,
         _ => op.ToString()
     };
 

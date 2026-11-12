@@ -187,4 +187,35 @@ public sealed class FancyTreeTableFilterTests : BunitContext
 
         Assert.Single(cut.FindAll("button:has(i.bi-eye) i.bi-funnel-fill"));
     }
+
+    private sealed class DatedNode(string name, DateTime day, params DatedNode[] children)
+    {
+        public string Name { get; } = name;
+        public DateTime Day { get; } = day;
+        public IReadOnlyList<DatedNode> Children { get; } = children;
+    }
+
+    [Fact]
+    public void DateColumn_BetweenFilter_KeepsMatchingChildAndAncestors()
+    {
+        List<DatedNode> roots =
+        [
+            new DatedNode("Root A", new DateTime(2020, 1, 1), new DatedNode("Child A1", new DateTime(2026, 6, 15, 9, 0, 0))),
+            new DatedNode("Root B", new DateTime(2020, 1, 1), new DatedNode("Child B1", new DateTime(2021, 1, 1)))
+        ];
+        IRenderedComponent<FancyTreeTable<DatedNode>> cut = Render<FancyTreeTable<DatedNode>>(parameters => parameters
+            .Add(p => p.Items, roots)
+            .Add(p => p.Columns,
+            [
+                new FancyColumn<DatedNode> { Key = "name", Title = "Name", ValueSelector = n => n.Name },
+                new FancyColumn<DatedNode> { Key = "day", Title = "Day", ValueSelector = n => n.Day, Filterable = true, FilterType = FancyColumnFilterType.Date }
+            ])
+            .Add(p => p.ChildItemsSelector, n => n.Children)
+            .Add(p => p.InitialColumnFilters, [new FancyColumnFilter("day", FancyColumnFilterOperator.Between, "2026-06-01", "2026-06-30")]));
+
+        List<string> rows = cut.FindAll("tbody tr").Select(row => row.TextContent).ToList();
+        Assert.Equal(2, rows.Count);
+        Assert.Contains("Root A", rows[0]);
+        Assert.Contains("Child A1", rows[1]);
+    }
 }

@@ -118,6 +118,7 @@
                                                         ColumnTitle="@column.Title"
                                                         ActiveFilter="columnFilters.Get(column.Key)"
                                                         AllowedOperators="column.FilterOperators"
+                                                        FilterType="column.FilterType"
                                                         Texts="ResolvedTexts"
                                                         OnApply="ApplyColumnFilterAsync"
                                                         OnClear="() => ClearColumnFilterAsync(column.Key)" />
