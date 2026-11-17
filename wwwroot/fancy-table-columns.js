@@ -48,13 +48,14 @@ function beginResize(table, state, handle, event) {
 
     const minimum = numberValue(header.dataset.minWidth, 24);
     const maximum = numberValue(header.dataset.maxWidth, Number.MAX_SAFE_INTEGER);
+    const startWidth = widths[index];
     state.resize = { pointerId: event.pointerId, startX: event.clientX, index, widths, columns, minimum, maximum };
     handle.setPointerCapture(event.pointerId);
     handle.classList.add("is-active");
 
     const move = moveEvent => {
         if (!state.resize || moveEvent.pointerId !== state.resize.pointerId) return;
-        const nextWidth = Math.min(maximum, Math.max(minimum, widths[index] + moveEvent.clientX - event.clientX));
+        const nextWidth = Math.min(maximum, Math.max(minimum, startWidth + moveEvent.clientX - event.clientX));
         state.resize.widths[index] = nextWidth;
         if (!state.frame) {
             state.frame = requestAnimationFrame(() => {
